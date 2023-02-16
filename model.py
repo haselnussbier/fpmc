@@ -1,0 +1,301 @@
+from typing import *
+
+import haiku as hk
+import jax
+import jax.numpy as jnp
+import jax.tree_util as tree
+import numpy as np
+import optax
+
+NodeValue = jnp.ndarray
+NodeFeatures = jnp.ndarray
+
+IFn = Callable[[NodeFeatures], NodeValue]
+CFn = Callable[[NodeValue, NodeValue], NodeValue]
+AFn = Callable[[NodeValue, NodeFeatures], NodeValue]
+RFn = Callable[[NodeValue], NodeValue]
+
+
+class Graph(NamedTuple):
+    nodes: list
+    steps: list
+
+
+class Node(NamedTuple):
+    wcet: NodeValue
+    features: NodeFeatures
+
+
+class Step(NamedTuple):
+    sender: int
+    receiver: int
+
+
+def Init(i_fn: IFn):
+    def _Init(graph: Graph):
+        # initialise a nodes wcet by the node features
+        for node in graph.nodes:
+            if node.wcet[0] == 0:
+                features = jax.tree_map(lambda x: x.wcet, node)
+                wcet = jax.tree_map(lambda x: i_fn(x), features)
+                node.wcet = wcet
+        return graph
+
+    return _Init
+
+def Collect(c_fn: CFn):
+    def _Collect(graph: Graph, step: Step):
+        # collect wcet from incoming edges and combine with own
+        inc_wcet = jax.tree_map(lambda x: x[step.sender].wcet, graph.nodes)
+        own_wcet = jax.tree_map(lambda x: x[step.receiver].wcet, graph.nodes)
+        wcet = jax.tree_map(lambda x, y: c_fn(x, y), inc_wcet, own_wcet)
+        graph.nodes[step.receiver].wcet = wcet
+        return graph
+
+    return _Collect
+
+def Apply(a_fn: AFn):
+    def _Apply(graph: Graph, step: Step):
+        # calculate wcet based on collected wcet value and own task information
+        new_wcet = jax.tree_map(lambda x, y: a_fn(x, y), graph.nodes[step.receiver].features, graph.nodes[step.receiver].wcet)
+        graph.nodes[step.receiver].wcet = new_wcet
+        return graph
+
+    return _Apply
+
+def Output(r_fn: RFn):
+    def _Output(graph: Graph):
+        # reduce wcets to singular value
+        for node in graph.nodes:
+            wcet = jax.tree_map(lambda x: r_fn(x), node.wcet)
+            node.wcet = wcet
+        return graph
+
+    return _Output
+
+
+class ModelConfig(NamedTuple):
+    propagation_steps: int
+    num_hidden_layers: int
+    num_hidden_neurons: int
+    num_hidden_size: int
+
+
+class ModelBase:
+    def make_xfn(self, num_hidden_layers, num_hidden_neurons, num_hidden_size, name):
+        layers = []
+        for i in range(num_hidden_layers):
+            layers += hk.Linear(num_hidden_neurons, name=name + '_linear_' + str(i)), jax.nn.tanh,
+        layers += hk.Linear(num_hidden_size, name=name + '_linear_out'), jax.nn.tanh,
+
+        return hk.Sequential(layers)
+
+    def make_rfn(self, num_input_size, num_output_size, name):
+        layers = []
+        i = 0
+        while num_input_size > num_output_size:
+            layers += hk.Linear(num_input_size, name=name + '_linear_' + str(i)), jax.nn.tanh,
+            num_input_size = int(num_input_size / 2)
+            i += 1
+        layers += hk.Linear(num_output_size, name=name + '_linear_out'), jax.nn.tanh,
+
+        return hk.Sequential(layers)
+
+
+class Model(ModelBase):
+    def __init__(self, model_config):
+        self.propagation_steps = model_config.propagation_steps
+        self.num_hidden_layers = model_config.num_hidden_layers
+        self.num_hidden_neurons = model_config.num_hidden_neurons
+        self.num_hidden_size = model_config.num_hidden_size
+
+        self.i = None
+        self.c = None
+        self.a = None
+        self.r = None
+
+    def i_fn(self, nf: NodeFeatures):
+        if not self.i:
+            self.i = self.make_xfn(
+                self.num_hidden_layers,
+                self.num_hidden_neurons,
+                self.num_hidden_size,
+                "i_fn"
+            )
+
+        return jax.tree_map(lambda x: self.i(x), nf)
+
+    def c_fn(self, iv: NodeValue, cv: NodeValue):
+        iv_and_cv = jax.tree_map(
+            lambda x, y: jnp.concatenate([x, y], axis=1), iv, cv
+        )
+
+        if not self.c:
+            self.c = self.make_xfn(
+                self.num_hidden_layers,
+                self.num_hidden_neurons,
+                self.num_hidden_size,
+                "_c_fn"
+            )
+            self.c = self.make_xfn(
+                self.num_hidden_layers,
+                self.num_hidden_neurons,
+                self.num_hidden_size,
+                "c_fn")
+        return jax.tree_map(lambda x: self.c(x), iv_and_cv)
+
+    def a_fn(self, nf: NodeFeatures, cv: NodeValue):
+        if not self.a:
+            self.a = self.make_xfn(
+                self.num_hidden_layers,
+                self.num_hidden_neurons,
+                self.num_hidden_size,
+                "a_fn")
+
+        nf_and_cv = jnp.concatenate([nf, cv], axis=1)
+
+        return jax.tree_map(lambda x: self.a(x), nf_and_cv)
+
+    def r_fn(self, cv: NodeValue):
+        if not self.r:
+            self.r = self.make_rfn(
+                self.num_hidden_size,
+                1,
+                "r_fn"
+            )
+
+        return jax.tree_map(lambda x: self.r(x), cv)
+
+    def get_net_definition(self):
+        def _get_net_definition(graph: Graph, debug_mode=True):
+            init = Init(i_fn=self.i_fn)
+            graph = init(graph)
+
+            def f_scan(graph, step):
+                collect = Collect(c_fn=self.c_fn)
+                graph = collect(graph, step)
+
+                apply = Apply(a_fn=self.a_fn)
+                graph = apply(graph, step)
+
+                return graph, step
+
+            if debug_mode:
+                n_steps = len(graph.steps)
+                for i in range(n_steps):
+                    step = jax.tree_map(lambda x: x[i], graph.steps)
+                    graph, _ = f_scan(graph, step)
+            else:
+                graph, extra = hk.scan(f_scan, graph, graph.steps)
+
+            output = Output(r_fn=self.r_fn)
+            graph = output(graph)
+            out = graph # get wcets
+
+            return out
+
+        return _get_net_definition
+
+
+def init_net(model_config, sample):
+    net = Model(model_config)
+    net_def = net.get_net_definition()
+    net = hk.without_apply_rng(hk.transform(net_def))
+    params = net.init(jax.random.PRNGKey(42), sample)
+
+    return net, params
+
+def train(net, params, sample, num_steps):
+    @jax.jit
+    def prediction_loss(params, sample):
+        preds = net.apply(params, sample.graph)
+        # calc loss
+
+        loss = 1
+
+        return loss
+
+    opt_init, opt_update = optax.adam(2e-4)
+    opt_state = opt_init(params)
+
+    @jax.jit
+    def update(params, opt_state, sample):
+        g = jax.grad(prediction_loss)(params, sample)
+        updates, opt_state = opt_update(g, opt_state)
+        return optax.apply_updates(params, updates), opt_state
+
+    for step in range(num_steps):
+        params, opt_state = update(params, opt_state, sample)
+        loss = prediction_loss(params, sample)
+
+        print("step: %d, loss: %f" % (step, loss))
+
+    return params
+
+def train_model(net, params, sample, num_steps):
+    @jax.jit
+    def prediction_loss(params, sample):
+        preds = net.apply(params, sample.graph)
+
+        # Squared error loss
+        err = jnp.array(sample.labels) - preds.squeeze()
+        loss = jnp.sum(jnp.square(err))
+
+        return loss
+
+    opt_init, opt_update = optax.adam(2e-4)
+    opt_state = opt_init(params)
+
+    @jax.jit
+    def update(params, opt_state, sample):
+        g = jax.grad(prediction_loss)(params, sample)
+        updates, opt_state = opt_update(g, opt_state)
+        return optax.apply_updates(params, updates), opt_state
+
+    for step in range(num_steps):
+        params, opt_state = update(params, opt_state, sample)
+        loss = prediction_loss(params, sample)
+
+        print("step: %d, loss: %f" % (step, loss))
+
+    return params
+
+'''def predict_model(
+        paired_graphs,
+        net,
+        params,
+        batch_size,
+        metrics_callbacks=[]
+):
+    pairs, relative_runtimes = list(map(list, zip(*paired_graphs)))
+    samples = get_batch(paired_graphs, batch_size)
+    predictions = list()
+    embs1 = list()
+    embs2 = list()
+    for sample in samples:
+        prediction, emb1, emb2 = net.apply(params, sample.graphs1, sample.graphs2)
+        predictions += prediction
+        embs1 += emb1
+        embs2 += emb2
+
+    # print out useful data for plot generation
+    train_validate = {}
+    for cb in metrics_callbacks:
+        for pred, rr, emb1, emb2 in zip(predictions, relative_runtimes, embs1, embs2):
+            train_validate['prediction'] = float(pred)
+            train_validate['rr'] = float(rr)
+            for i in len(emb1):
+                train_validate['emb1_' + i] = emb1.tolist()[i]
+            train_validate['emb2'] = emb2.tolist()
+            cb(train_validate)
+
+    return predictions, emb1, emb2
+
+model_config=0
+sample=0
+net, params = init_net(model_config, sample)
+
+params_new = train(net=net, params=params, sample=sample, num_steps=100)
+print(predict())
+'''
+
