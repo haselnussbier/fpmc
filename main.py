@@ -1,39 +1,19 @@
 from model import *
 
-#       0(HC)---
-#               \
-#                --- 2(LC)
-#               /
-#       1(HC)---
+#       0(HC)--->
+#                 \
+#                 2(LC)
+#                 /
+#       1(HC)--->
 
-Node0 = Node(wcet=jnp.asarray([0]),
-             features=jnp.asarray([
-                 1,
-                 2,
-                 3,
-             ])
-             )
-
-Node1 = Node(wcet=jnp.asarray([0]),
-             features=jnp.asarray([
-                 1,
-                 4,
-                 5,
-             ])
-             )
-
-Node2 = Node(wcet=jnp.asarray([0]),
-             features=jnp.asarray([
-                 0,
-                 6,
-                 7,
-             ])
-             )
-
-Step1 = Step(sender=0, receiver=2)
-Step2 = Step(sender=1, receiver=2)
-
-exampleGraph = Graph(nodes=[Node0, Node1, Node2], steps=[Step1, Step2])
+exampleGraph = Graph(node_features=jnp.asarray([jnp.asarray([1, 2, 3], dtype=jnp.float32),
+                                                jnp.asarray([1, 4, 5], dtype=jnp.float32),
+                                                jnp.asarray([0, 6, 7], dtype=jnp.float32)], dtype=jnp.float32),
+                     node_values=jnp.asarray([jnp.asarray([1], dtype=jnp.float32),
+                                              jnp.asarray([1], dtype=jnp.float32),
+                                              jnp.asarray([0], dtype=jnp.float32)], dtype=jnp.float32),
+                     steps=[Step(sender=jnp.asarray([0], dtype=jnp.int8), receiver=jnp.asarray([2], dtype=jnp.int8)),
+                            Step(sender=jnp.asarray([1], dtype=jnp.int8), receiver=jnp.asarray([2], dtype=jnp.int8))])
 
 model_config = ModelConfig(
     propagation_steps=2,
@@ -48,6 +28,7 @@ net, params = init_net(model_config=model_config, sample=sample)
 trained_params = train_model(net=net,
                        params=params,
                        sample=exampleGraph,
-                       num_steps=1000)
+                       num_steps=10)
 
-#optimal_wcets=predict_model()
+# optimal_wcets=predict_model()
+

@@ -9,6 +9,7 @@ import optax
 
 NodeValue = jnp.ndarray
 NodeFeatures = jnp.ndarray
+AnyNested = Union[Iterable["ArrayTree"], Mapping[Any, "ArrayTree"]]
 
 IFn = Callable[[NodeFeatures], NodeValue]
 CFn = Callable[[NodeValue, NodeValue], NodeValue]
@@ -17,59 +18,72 @@ RFn = Callable[[NodeValue], NodeValue]
 
 
 class Graph(NamedTuple):
-    nodes: list
-    steps: list
-
-
-class Node(NamedTuple):
-    wcet: NodeValue
-    features: NodeFeatures
+    node_features: NodeFeatures
+    node_values: NodeValue
+    steps: AnyNested
 
 
 class Step(NamedTuple):
-    sender: int
-    receiver: int
+    sender: jnp.ndarray
+    receiver: jnp.ndarray
 
 
 def Init(i_fn: IFn):
     def _Init(graph: Graph):
         # initialise a nodes wcet by the node features
-        for node in graph.nodes:
-            if node.wcet[0] == 0:
-                features = jax.tree_map(lambda x: x.wcet, node)
-                wcet = jax.tree_map(lambda x: i_fn(x), features)
-                node.wcet = wcet
-        return graph
+        new_wcets = list()
+        node_features = graph.node_features
+        for node_features in node_features:
+            new_wcet = jax.tree_map(lambda x: i_fn(x), node_features)
+            new_wcets.append(new_wcet)
+
+        return graph._replace(node_values=jnp.asarray(new_wcets))
 
     return _Init
 
 def Collect(c_fn: CFn):
     def _Collect(graph: Graph, step: Step):
+
+        sender = jnp.asarray(step.sender, dtype=jnp.int8)
+        receiver = jnp.asarray(step.receiver, dtype=jnp.int8)
+        wcets = jnp.asarray(graph.node_values)
+
         # collect wcet from incoming edges and combine with own
-        inc_wcet = jax.tree_map(lambda x: x[step.sender].wcet, graph.nodes)
-        own_wcet = jax.tree_map(lambda x: x[step.receiver].wcet, graph.nodes)
-        wcet = jax.tree_map(lambda x, y: c_fn(x, y), inc_wcet, own_wcet)
-        graph.nodes[step.receiver].wcet = wcet
-        return graph
+        inc_wcet = jax.tree_map(lambda x: x[sender], wcets)
+        own_wcet = jax.tree_map(lambda x: x[receiver], wcets)
+        new_wcet = jax.tree_map(lambda x, y: c_fn(x, y), inc_wcet, own_wcet)
+
+        return graph._replace(node_values=graph.node_values.at[receiver].set(new_wcet))
 
     return _Collect
 
 def Apply(a_fn: AFn):
     def _Apply(graph: Graph, step: Step):
+
+        receiver = step.receiver
+        wcets = graph.node_values
+        nf = graph.node_features
+
         # calculate wcet based on collected wcet value and own task information
-        new_wcet = jax.tree_map(lambda x, y: a_fn(x, y), graph.nodes[step.receiver].features, graph.nodes[step.receiver].wcet)
-        graph.nodes[step.receiver].wcet = new_wcet
-        return graph
+        wcet = jax.tree_map(lambda x: x[receiver], wcets)
+        node_features = jax.tree_map(lambda x: x[receiver], nf)
+        new_wcet = jax.tree_map(lambda x, y: a_fn(x, y), node_features, wcet)
+        return graph._replace(node_values=graph.node_values.at[receiver].set(new_wcet))
 
     return _Apply
 
 def Output(r_fn: RFn):
     def _Output(graph: Graph):
         # reduce wcets to singular value
-        for node in graph.nodes:
-            wcet = jax.tree_map(lambda x: r_fn(x), node.wcet)
-            node.wcet = wcet
-        return graph
+
+        new_wcets = list()
+        node_features = graph.node_features
+        for node_features in node_features:
+            new_wcet = jax.tree_map(lambda x: r_fn(x), node_features)
+            new_wcets.append(new_wcet)
+
+        return graph._replace(node_values=jnp.asarray(new_wcets))
+
 
     return _Output
 
@@ -183,14 +197,14 @@ class Model(ModelBase):
             if debug_mode:
                 n_steps = len(graph.steps)
                 for i in range(n_steps):
-                    step = jax.tree_map(lambda x: x[i], graph.steps)
+                    step =graph.steps[i] # jax.tree_map(lambda x: x[i], graph.steps)
                     graph, _ = f_scan(graph, step)
             else:
                 graph, extra = hk.scan(f_scan, graph, graph.steps)
 
             output = Output(r_fn=self.r_fn)
             graph = output(graph)
-            out = graph # get wcets
+            out = graph.node_values # get wcets
 
             return out
 
@@ -205,42 +219,18 @@ def init_net(model_config, sample):
 
     return net, params
 
-def train(net, params, sample, num_steps):
-    @jax.jit
-    def prediction_loss(params, sample):
-        preds = net.apply(params, sample.graph)
-        # calc loss
-
-        loss = 1
-
-        return loss
-
-    opt_init, opt_update = optax.adam(2e-4)
-    opt_state = opt_init(params)
-
-    @jax.jit
-    def update(params, opt_state, sample):
-        g = jax.grad(prediction_loss)(params, sample)
-        updates, opt_state = opt_update(g, opt_state)
-        return optax.apply_updates(params, updates), opt_state
-
-    for step in range(num_steps):
-        params, opt_state = update(params, opt_state, sample)
-        loss = prediction_loss(params, sample)
-
-        print("step: %d, loss: %f" % (step, loss))
-
-    return params
 
 def train_model(net, params, sample, num_steps):
     @jax.jit
     def prediction_loss(params, sample):
+        """
         preds = net.apply(params, sample.graph)
 
         # Squared error loss
         err = jnp.array(sample.labels) - preds.squeeze()
         loss = jnp.sum(jnp.square(err))
-
+        """
+        loss = float(1)
         return loss
 
     opt_init, opt_update = optax.adam(2e-4)
@@ -298,4 +288,5 @@ net, params = init_net(model_config, sample)
 params_new = train(net=net, params=params, sample=sample, num_steps=100)
 print(predict())
 '''
+
 
