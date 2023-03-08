@@ -204,7 +204,7 @@ class Model(ModelBase):
 
             output = Output(r_fn=self.r_fn)
             graph = output(graph)
-            out = graph.node_values # get wcets
+            out = graph.node_values
 
             return out
 
@@ -223,13 +223,7 @@ def init_net(model_config, sample):
 def train_model(net, params, sample, num_steps):
     @jax.jit
     def prediction_loss(params, sample):
-        """
-        preds = net.apply(params, sample.graph)
-
-        # Squared error loss
-        err = jnp.array(sample.labels) - preds.squeeze()
-        loss = jnp.sum(jnp.square(err))
-        """
+        # implement proper loss calculation
         loss = float(1)
         return loss
 
@@ -250,43 +244,5 @@ def train_model(net, params, sample, num_steps):
 
     return params
 
-'''def predict_model(
-        paired_graphs,
-        net,
-        params,
-        batch_size,
-        metrics_callbacks=[]
-):
-    pairs, relative_runtimes = list(map(list, zip(*paired_graphs)))
-    samples = get_batch(paired_graphs, batch_size)
-    predictions = list()
-    embs1 = list()
-    embs2 = list()
-    for sample in samples:
-        prediction, emb1, emb2 = net.apply(params, sample.graphs1, sample.graphs2)
-        predictions += prediction
-        embs1 += emb1
-        embs2 += emb2
-
-    # print out useful data for plot generation
-    train_validate = {}
-    for cb in metrics_callbacks:
-        for pred, rr, emb1, emb2 in zip(predictions, relative_runtimes, embs1, embs2):
-            train_validate['prediction'] = float(pred)
-            train_validate['rr'] = float(rr)
-            for i in len(emb1):
-                train_validate['emb1_' + i] = emb1.tolist()[i]
-            train_validate['emb2'] = emb2.tolist()
-            cb(train_validate)
-
-    return predictions, emb1, emb2
-
-model_config=0
-sample=0
-net, params = init_net(model_config, sample)
-
-params_new = train(net=net, params=params, sample=sample, num_steps=100)
-print(predict())
-'''
 
 
