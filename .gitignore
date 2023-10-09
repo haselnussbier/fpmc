@@ -1,0 +1,8 @@
+__pycache__
+.python-version
+.idea
+.idea 2
+graphs/Benchmarks/genned1
+graphs/Benchmarks/100
+graphs/Benchmarks/2&4Cores/c2
+graphs/Benchmarks/2&4Cores/c4/80
