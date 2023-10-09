@@ -1,0 +1,470 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<mcsystem>
+    <mcdag deadline="1800" name="genned-0-ed-10.0-0">
+        <actor name="D0N32">
+            <wcet number="0">10</wcet>
+            <wcet number="1">10</wcet>
+            <maxpow number="0.5195744693215814"/>
+            <maxpow number="0.5195744693215814"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N14">
+            <wcet number="0">40</wcet>
+            <wcet number="1">70</wcet>
+            <maxpow number="0.7466376770221546"/>
+            <maxpow number="0.7466376770221546"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N31">
+            <wcet number="0">50</wcet>
+            <wcet number="1">90</wcet>
+            <maxpow number="0.7168054919331305"/>
+            <maxpow number="0.7168054919331305"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N37">
+            <wcet number="0">30</wcet>
+            <wcet number="1">150</wcet>
+            <maxpow number="0.816490427887163"/>
+            <maxpow number="0.816490427887163"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N16">
+            <wcet number="0">50</wcet>
+            <wcet number="1">50</wcet>
+            <maxpow number="0.5493826556884109"/>
+            <maxpow number="0.5493826556884109"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N28">
+            <wcet number="0">60</wcet>
+            <wcet number="1">110</wcet>
+            <maxpow number="0.30747256833461467"/>
+            <maxpow number="0.30747256833461467"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N27">
+            <wcet number="0">10</wcet>
+            <wcet number="1">10</wcet>
+            <maxpow number="0.7496906219376721"/>
+            <maxpow number="0.7496906219376721"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N43">
+            <wcet number="0">20</wcet>
+            <wcet number="1">80</wcet>
+            <maxpow number="0.2781645955735696"/>
+            <maxpow number="0.2781645955735696"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N33">
+            <wcet number="0">80</wcet>
+            <wcet number="1">90</wcet>
+            <maxpow number="0.6351640514264386"/>
+            <maxpow number="0.6351640514264386"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N10">
+            <wcet number="0">20</wcet>
+            <wcet number="1">30</wcet>
+            <maxpow number="0.4041619900478045"/>
+            <maxpow number="0.4041619900478045"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N34">
+            <wcet number="0">220</wcet>
+            <wcet number="1">300</wcet>
+            <maxpow number="0.9080665188768624"/>
+            <maxpow number="0.9080665188768624"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N46">
+            <wcet number="0">20</wcet>
+            <wcet number="1">80</wcet>
+            <maxpow number="0.1732789384213787"/>
+            <maxpow number="0.1732789384213787"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N26">
+            <wcet number="0">70</wcet>
+            <wcet number="1">300</wcet>
+            <maxpow number="0.4192539174607228"/>
+            <maxpow number="0.4192539174607228"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N2">
+            <wcet number="0">20</wcet>
+            <wcet number="1">20</wcet>
+            <maxpow number="0.528469033194237"/>
+            <maxpow number="0.528469033194237"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N11">
+            <wcet number="0">20</wcet>
+            <wcet number="1">30</wcet>
+            <maxpow number="0.9203401326686911"/>
+            <maxpow number="0.9203401326686911"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N41">
+            <wcet number="0">150</wcet>
+            <wcet number="1">160</wcet>
+            <maxpow number="0.5115266973000046"/>
+            <maxpow number="0.5115266973000046"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N39">
+            <wcet number="0">20</wcet>
+            <wcet number="1">20</wcet>
+            <maxpow number="1.0966227665179968"/>
+            <maxpow number="1.0966227665179968"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N21">
+            <wcet number="0">50</wcet>
+            <wcet number="1">50</wcet>
+            <maxpow number="0.4801541227570916"/>
+            <maxpow number="0.4801541227570916"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N7">
+            <wcet number="0">20</wcet>
+            <wcet number="1">30</wcet>
+            <maxpow number="0.34186372041317925"/>
+            <maxpow number="0.34186372041317925"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N30">
+            <wcet number="0">80</wcet>
+            <wcet number="1">100</wcet>
+            <maxpow number="0.6911192559450687"/>
+            <maxpow number="0.6911192559450687"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N24">
+            <wcet number="0">10</wcet>
+            <wcet number="1">40</wcet>
+            <maxpow number="0.7123126477923828"/>
+            <maxpow number="0.7123126477923828"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N38">
+            <wcet number="0">80</wcet>
+            <wcet number="1">110</wcet>
+            <maxpow number="0.6089298988735257"/>
+            <maxpow number="0.6089298988735257"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N23">
+            <wcet number="0">10</wcet>
+            <wcet number="1">10</wcet>
+            <maxpow number="0.6750503821548623"/>
+            <maxpow number="0.6750503821548623"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N8">
+            <wcet number="0">10</wcet>
+            <wcet number="1">10</wcet>
+            <maxpow number="0.7724331694324511"/>
+            <maxpow number="0.7724331694324511"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N48">
+            <wcet number="0">10</wcet>
+            <wcet number="1">10</wcet>
+            <maxpow number="0.6947020999558596"/>
+            <maxpow number="0.6947020999558596"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N19">
+            <wcet number="0">20</wcet>
+            <wcet number="1">30</wcet>
+            <maxpow number="0.5518068050523776"/>
+            <maxpow number="0.5518068050523776"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N18">
+            <wcet number="0">60</wcet>
+            <wcet number="1">60</wcet>
+            <maxpow number="0.4816470966939356"/>
+            <maxpow number="0.4816470966939356"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N5">
+            <wcet number="0">10</wcet>
+            <wcet number="1">10</wcet>
+            <maxpow number="0.7277512578978178"/>
+            <maxpow number="0.7277512578978178"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N1">
+            <wcet number="0">20</wcet>
+            <wcet number="1">120</wcet>
+            <maxpow number="0.4200800282578424"/>
+            <maxpow number="0.4200800282578424"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N42">
+            <wcet number="0">150</wcet>
+            <wcet number="1">260</wcet>
+            <maxpow number="0.7801831002373059"/>
+            <maxpow number="0.7801831002373059"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N9">
+            <wcet number="0">10</wcet>
+            <wcet number="1">30</wcet>
+            <maxpow number="0.6029795596606975"/>
+            <maxpow number="0.6029795596606975"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N15">
+            <wcet number="0">30</wcet>
+            <wcet number="1">70</wcet>
+            <maxpow number="0.37305248320877155"/>
+            <maxpow number="0.37305248320877155"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N20">
+            <wcet number="0">180</wcet>
+            <wcet number="1">220</wcet>
+            <maxpow number="0.7349724196439167"/>
+            <maxpow number="0.7349724196439167"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N0">
+            <wcet number="0">10</wcet>
+            <wcet number="1">20</wcet>
+            <maxpow number="0.5886837382349968"/>
+            <maxpow number="0.5886837382349968"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N17">
+            <wcet number="0">180</wcet>
+            <wcet number="1">200</wcet>
+            <maxpow number="0.44165924367631104"/>
+            <maxpow number="0.44165924367631104"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N49">
+            <wcet number="0">10</wcet>
+            <wcet number="1">10</wcet>
+            <maxpow number="0.6295907487764779"/>
+            <maxpow number="0.6295907487764779"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N29">
+            <wcet number="0">10</wcet>
+            <wcet number="1">10</wcet>
+            <maxpow number="0.34507265002526083"/>
+            <maxpow number="0.34507265002526083"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N4">
+            <wcet number="0">30</wcet>
+            <wcet number="1">200</wcet>
+            <maxpow number="0.4045249719465249"/>
+            <maxpow number="0.4045249719465249"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N35">
+            <wcet number="0">50</wcet>
+            <wcet number="1">50</wcet>
+            <maxpow number="0.7983734949956574"/>
+            <maxpow number="0.7983734949956574"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N3">
+            <wcet number="0">60</wcet>
+            <wcet number="1">110</wcet>
+            <maxpow number="0.2825888041227455"/>
+            <maxpow number="0.2825888041227455"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N6">
+            <wcet number="0">120</wcet>
+            <wcet number="1">120</wcet>
+            <maxpow number="0.6938127129400384"/>
+            <maxpow number="0.6938127129400384"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N47">
+            <wcet number="0">10</wcet>
+            <wcet number="1">60</wcet>
+            <maxpow number="0.3949339810407144"/>
+            <maxpow number="0.3949339810407144"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N44">
+            <wcet number="0">20</wcet>
+            <wcet number="1">100</wcet>
+            <maxpow number="0.5009651532937813"/>
+            <maxpow number="0.5009651532937813"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N12">
+            <wcet number="0">10</wcet>
+            <wcet number="1">10</wcet>
+            <maxpow number="0.4855733538236628"/>
+            <maxpow number="0.4855733538236628"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N40">
+            <wcet number="0">40</wcet>
+            <wcet number="1">50</wcet>
+            <maxpow number="0.5775937062231153"/>
+            <maxpow number="0.5775937062231153"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N13">
+            <wcet number="0">150</wcet>
+            <wcet number="1">180</wcet>
+            <maxpow number="0.4334423628637848"/>
+            <maxpow number="0.4334423628637848"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N45">
+            <wcet number="0">10</wcet>
+            <wcet number="1">10</wcet>
+            <maxpow number="0.8726524465260637"/>
+            <maxpow number="0.8726524465260637"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N36">
+            <wcet number="0">160</wcet>
+            <wcet number="1">180</wcet>
+            <maxpow number="0.7060074579787728"/>
+            <maxpow number="0.7060074579787728"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N22">
+            <wcet number="0">20</wcet>
+            <wcet number="1">30</wcet>
+            <maxpow number="0.15078026192833105"/>
+            <maxpow number="0.15078026192833105"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N25">
+            <wcet number="0">10</wcet>
+            <wcet number="1">40</wcet>
+            <maxpow number="0.3337635492896244"/>
+            <maxpow number="0.3337635492896244"/>
+            <fprob>0.0</fprob>
+        </actor>
+        <ports>
+            <port dstActor="D0N47" name="p0" srcActor="D0N32"/>
+            <port dstActor="D0N40" name="p1" srcActor="D0N32"/>
+            <port dstActor="D0N45" name="p2" srcActor="D0N32"/>
+            <port dstActor="D0N43" name="p3" srcActor="D0N31"/>
+            <port dstActor="D0N45" name="p4" srcActor="D0N37"/>
+            <port dstActor="D0N42" name="p5" srcActor="D0N37"/>
+            <port dstActor="D0N39" name="p6" srcActor="D0N37"/>
+            <port dstActor="D0N43" name="p7" srcActor="D0N28"/>
+            <port dstActor="D0N35" name="p8" srcActor="D0N28"/>
+            <port dstActor="D0N38" name="p9" srcActor="D0N27"/>
+            <port dstActor="D0N41" name="p10" srcActor="D0N33"/>
+            <port dstActor="D0N32" name="p11" srcActor="D0N10"/>
+            <port dstActor="D0N46" name="p12" srcActor="D0N10"/>
+            <port dstActor="D0N42" name="p13" srcActor="D0N10"/>
+            <port dstActor="D0N40" name="p14" srcActor="D0N34"/>
+            <port dstActor="D0N39" name="p15" srcActor="D0N34"/>
+            <port dstActor="D0N49" name="p16" srcActor="D0N46"/>
+            <port dstActor="D0N17" name="p17" srcActor="D0N2"/>
+            <port dstActor="D0N12" name="p18" srcActor="D0N11"/>
+            <port dstActor="D0N17" name="p19" srcActor="D0N11"/>
+            <port dstActor="D0N33" name="p20" srcActor="D0N11"/>
+            <port dstActor="D0N48" name="p21" srcActor="D0N41"/>
+            <port dstActor="D0N49" name="p22" srcActor="D0N41"/>
+            <port dstActor="D0N45" name="p23" srcActor="D0N39"/>
+            <port dstActor="D0N33" name="p24" srcActor="D0N21"/>
+            <port dstActor="D0N43" name="p25" srcActor="D0N21"/>
+            <port dstActor="D0N35" name="p26" srcActor="D0N21"/>
+            <port dstActor="D0N37" name="p27" srcActor="D0N21"/>
+            <port dstActor="D0N46" name="p28" srcActor="D0N21"/>
+            <port dstActor="D0N30" name="p29" srcActor="D0N7"/>
+            <port dstActor="D0N20" name="p30" srcActor="D0N7"/>
+            <port dstActor="D0N23" name="p31" srcActor="D0N7"/>
+            <port dstActor="D0N40" name="p32" srcActor="D0N24"/>
+            <port dstActor="D0N26" name="p33" srcActor="D0N24"/>
+            <port dstActor="D0N27" name="p34" srcActor="D0N24"/>
+            <port dstActor="D0N34" name="p35" srcActor="D0N24"/>
+            <port dstActor="D0N44" name="p36" srcActor="D0N24"/>
+            <port dstActor="D0N32" name="p37" srcActor="D0N24"/>
+            <port dstActor="D0N49" name="p38" srcActor="D0N24"/>
+            <port dstActor="D0N39" name="p39" srcActor="D0N38"/>
+            <port dstActor="D0N47" name="p40" srcActor="D0N23"/>
+            <port dstActor="D0N47" name="p41" srcActor="D0N8"/>
+            <port dstActor="D0N37" name="p42" srcActor="D0N8"/>
+            <port dstActor="D0N9" name="p43" srcActor="D0N8"/>
+            <port dstActor="D0N27" name="p44" srcActor="D0N8"/>
+            <port dstActor="D0N49" name="p45" srcActor="D0N48"/>
+            <port dstActor="D0N31" name="p46" srcActor="D0N19"/>
+            <port dstActor="D0N32" name="p47" srcActor="D0N18"/>
+            <port dstActor="D0N22" name="p48" srcActor="D0N18"/>
+            <port dstActor="D0N33" name="p49" srcActor="D0N18"/>
+            <port dstActor="D0N45" name="p50" srcActor="D0N18"/>
+            <port dstActor="D0N31" name="p51" srcActor="D0N18"/>
+            <port dstActor="D0N34" name="p52" srcActor="D0N18"/>
+            <port dstActor="D0N21" name="p53" srcActor="D0N18"/>
+            <port dstActor="D0N25" name="p54" srcActor="D0N5"/>
+            <port dstActor="D0N8" name="p55" srcActor="D0N5"/>
+            <port dstActor="D0N23" name="p56" srcActor="D0N1"/>
+            <port dstActor="D0N5" name="p57" srcActor="D0N1"/>
+            <port dstActor="D0N44" name="p58" srcActor="D0N1"/>
+            <port dstActor="D0N10" name="p59" srcActor="D0N1"/>
+            <port dstActor="D0N41" name="p60" srcActor="D0N1"/>
+            <port dstActor="D0N12" name="p61" srcActor="D0N9"/>
+            <port dstActor="D0N40" name="p62" srcActor="D0N9"/>
+            <port dstActor="D0N26" name="p63" srcActor="D0N9"/>
+            <port dstActor="D0N23" name="p64" srcActor="D0N15"/>
+            <port dstActor="D0N21" name="p65" srcActor="D0N20"/>
+            <port dstActor="D0N38" name="p66" srcActor="D0N0"/>
+            <port dstActor="D0N1" name="p67" srcActor="D0N0"/>
+            <port dstActor="D0N43" name="p68" srcActor="D0N0"/>
+            <port dstActor="D0N7" name="p69" srcActor="D0N0"/>
+            <port dstActor="D0N8" name="p70" srcActor="D0N0"/>
+            <port dstActor="D0N21" name="p71" srcActor="D0N17"/>
+            <port dstActor="D0N43" name="p72" srcActor="D0N17"/>
+            <port dstActor="D0N47" name="p73" srcActor="D0N17"/>
+            <port dstActor="D0N44" name="p74" srcActor="D0N17"/>
+            <port dstActor="D0N37" name="p75" srcActor="D0N17"/>
+            <port dstActor="D0N29" name="p76" srcActor="D0N17"/>
+            <port dstActor="D0N43" name="p77" srcActor="D0N29"/>
+            <port dstActor="D0N22" name="p78" srcActor="D0N4"/>
+            <port dstActor="D0N35" name="p79" srcActor="D0N4"/>
+            <port dstActor="D0N28" name="p80" srcActor="D0N4"/>
+            <port dstActor="D0N21" name="p81" srcActor="D0N4"/>
+            <port dstActor="D0N23" name="p82" srcActor="D0N4"/>
+            <port dstActor="D0N46" name="p83" srcActor="D0N35"/>
+            <port dstActor="D0N45" name="p84" srcActor="D0N35"/>
+            <port dstActor="D0N19" name="p85" srcActor="D0N3"/>
+            <port dstActor="D0N21" name="p86" srcActor="D0N3"/>
+            <port dstActor="D0N20" name="p87" srcActor="D0N3"/>
+            <port dstActor="D0N38" name="p88" srcActor="D0N3"/>
+            <port dstActor="D0N49" name="p89" srcActor="D0N3"/>
+            <port dstActor="D0N42" name="p90" srcActor="D0N3"/>
+            <port dstActor="D0N39" name="p91" srcActor="D0N3"/>
+            <port dstActor="D0N37" name="p92" srcActor="D0N3"/>
+            <port dstActor="D0N36" name="p93" srcActor="D0N3"/>
+            <port dstActor="D0N47" name="p94" srcActor="D0N6"/>
+            <port dstActor="D0N7" name="p95" srcActor="D0N6"/>
+            <port dstActor="D0N18" name="p96" srcActor="D0N6"/>
+            <port dstActor="D0N48" name="p97" srcActor="D0N44"/>
+            <port dstActor="D0N13" name="p98" srcActor="D0N12"/>
+            <port dstActor="D0N33" name="p99" srcActor="D0N12"/>
+            <port dstActor="D0N42" name="p100" srcActor="D0N12"/>
+            <port dstActor="D0N44" name="p101" srcActor="D0N40"/>
+            <port dstActor="D0N46" name="p102" srcActor="D0N13"/>
+            <port dstActor="D0N31" name="p103" srcActor="D0N13"/>
+            <port dstActor="D0N19" name="p104" srcActor="D0N13"/>
+            <port dstActor="D0N37" name="p105" srcActor="D0N36"/>
+            <port dstActor="D0N26" name="p106" srcActor="D0N22"/>
+            <port dstActor="D0N34" name="p107" srcActor="D0N22"/>
+            <port dstActor="D0N36" name="p108" srcActor="D0N25"/>
+            <port dstActor="D0N30" name="p109" srcActor="D0N25"/>
+            <port dstActor="D0N39" name="p110" srcActor="D0N25"/>
+        </ports>
+    </mcdag>
+    <cores number="3"/>
+    <levels number="2"/>
+</mcsystem>

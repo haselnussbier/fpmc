@@ -6,6 +6,7 @@ import jax.numpy as jnp
 import jax.tree_util as tree
 import numpy as np
 import optax
+import random
 
 NodeValue = jnp.ndarray
 NodeFeatures = jnp.ndarray
@@ -31,12 +32,13 @@ class Step(NamedTuple):
 def Init(i_fn: IFn):
     def _Init(graph: Graph):
         # initialise a nodes wcet by the node features
-        new_wcets = list()
         node_features = graph.node_features
+        """
         for node_features in node_features:
             new_wcet = jax.tree_map(lambda x: i_fn(x), node_features)
             new_wcets.append(new_wcet)
-
+        """
+        new_wcets = jax.tree_map(lambda x: i_fn(x), node_features)
         return graph._replace(node_values=jnp.asarray(new_wcets))
 
     return _Init
@@ -44,16 +46,22 @@ def Init(i_fn: IFn):
 def Collect(c_fn: CFn):
     def _Collect(graph: Graph, step: Step):
 
-        sender = jnp.asarray(step.sender, dtype=jnp.int8)
-        receiver = jnp.asarray(step.receiver, dtype=jnp.int8)
-        wcets = jnp.asarray(graph.node_values)
+        sender = step.sender
+        receiver = step.receiver
+        wcets = graph.node_values
 
         # collect wcet from incoming edges and combine with own
         inc_wcet = jax.tree_map(lambda x: x[sender], wcets)
         own_wcet = jax.tree_map(lambda x: x[receiver], wcets)
-        new_wcet = jax.tree_map(lambda x, y: c_fn(x, y), inc_wcet, own_wcet)
+        new_wcet = jax.tree_multimap(lambda x, y: c_fn(x, y), inc_wcet, own_wcet)
 
-        return graph._replace(node_values=graph.node_values.at[receiver].set(new_wcet))
+        values_new = jax.tree_multimap(
+            lambda x, y: jax.ops.index_update(x, step.receiver, y),
+            graph.node_values,
+            new_wcet,
+        )
+
+        return graph._replace(node_values=values_new)
 
     return _Collect
 
@@ -68,7 +76,14 @@ def Apply(a_fn: AFn):
         wcet = jax.tree_map(lambda x: x[receiver], wcets)
         node_features = jax.tree_map(lambda x: x[receiver], nf)
         new_wcet = jax.tree_map(lambda x, y: a_fn(x, y), node_features, wcet)
-        return graph._replace(node_values=graph.node_values.at[receiver].set(new_wcet))
+
+        values_new = jax.tree_multimap(
+            lambda x, y: jax.ops.index_update(x, step.receiver, y),
+            graph.node_values,
+            new_wcet,
+        )
+
+        return graph._replace(node_values=values_new)
 
     return _Apply
 
@@ -76,13 +91,14 @@ def Output(r_fn: RFn):
     def _Output(graph: Graph):
         # reduce wcets to singular value
 
-        new_wcets = list()
-        node_features = graph.node_features
+        wcets = graph.node_values
+        """
         for node_features in node_features:
             new_wcet = jax.tree_map(lambda x: r_fn(x), node_features)
-            new_wcets.append(new_wcet)
-
-        return graph._replace(node_values=jnp.asarray(new_wcets))
+            new_wcets.append(np.abs(new_wcet))
+        """
+        new_wcets = jax.tree_map(lambda x: r_fn(x), wcets)
+        return graph._replace(node_values=new_wcets)
 
 
     return _Output
@@ -149,13 +165,8 @@ class Model(ModelBase):
                 self.num_hidden_layers,
                 self.num_hidden_neurons,
                 self.num_hidden_size,
-                "_c_fn"
-            )
-            self.c = self.make_xfn(
-                self.num_hidden_layers,
-                self.num_hidden_neurons,
-                self.num_hidden_size,
                 "c_fn")
+
         return jax.tree_map(lambda x: self.c(x), iv_and_cv)
 
     def a_fn(self, nf: NodeFeatures, cv: NodeValue):
@@ -197,7 +208,7 @@ class Model(ModelBase):
             if debug_mode:
                 n_steps = len(graph.steps)
                 for i in range(n_steps):
-                    step =graph.steps[i] # jax.tree_map(lambda x: x[i], graph.steps)
+                    step = graph.steps[i] # jax.tree_map(lambda x: x[i], graph.steps)
                     graph, _ = f_scan(graph, step)
             else:
                 graph, extra = hk.scan(f_scan, graph, graph.steps)
@@ -216,21 +227,55 @@ def init_net(model_config, sample):
     net_def = net.get_net_definition()
     net = hk.without_apply_rng(hk.transform(net_def))
     params = net.init(jax.random.PRNGKey(42), sample)
-
     return net, params
 
 
 def train_model(net, params, sample, num_steps):
-    @jax.jit
+
+    #@jax.jit
+    def utilization(wcets, sample):
+        #do magic
+        utilization = jnp.sum(wcets)/2000
+
+        return utilization
+
+    #@jax.jit
+    def mode_switch_p(wcets, sample):
+        # do magic
+        p_task = jnp.zeros_like(wcets)
+        i = 0
+        for wcet_lo, nf in zip(wcets, sample.node_features):
+            acet = nf[1]*random.uniform(0.2, 1/3)
+            d = nf[1]*random.uniform(0.1,0.2)
+            n=(wcet_lo-acet)/d
+            n=n.astype(int)
+            if n<0:
+                p_task = p_task.at[i].set(jnp.asarray([1], dtype=jnp.float32))
+            else:
+                p_task = p_task.at[i].set(1/(1+jnp.power(n, 2)))
+            i = i + 1
+        p_task = jnp.asarray(p_task)
+        p_task = 1 - p_task
+        p_task = jnp.prod(p_task)
+        p_sys = 1 - p_task
+        #p_sys = 1 - jnp.prod(1-jnp.asarray(p_task))
+        return p_sys
+    #@jax.jit
     def prediction_loss(params, sample):
         # implement proper loss calculation
-        loss = float(1)
+        wcets = jnp.abs(net.apply(params, sample))*300
+        util = utilization(wcets, sample)
+        p = mode_switch_p(wcets, sample)
+        loss = (util - util*(1-p))*100
+        print(wcets)
+        print(util)
+        print(p)
         return loss
 
     opt_init, opt_update = optax.adam(2e-4)
     opt_state = opt_init(params)
 
-    @jax.jit
+    #@jax.jit
     def update(params, opt_state, sample):
         g = jax.grad(prediction_loss)(params, sample)
         updates, opt_state = opt_update(g, opt_state)
@@ -239,7 +284,6 @@ def train_model(net, params, sample, num_steps):
     for step in range(num_steps):
         params, opt_state = update(params, opt_state, sample)
         loss = prediction_loss(params, sample)
-
         print("step: %d, loss: %f" % (step, loss))
 
     return params
