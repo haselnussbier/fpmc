@@ -232,7 +232,7 @@ def init_net(model_config, sample):
 
 def train_model(net, params, sample, num_steps):
 
-    #@jax.jit
+    @jax.jit
     def utilization(wcets_lo):
         #do magic
 
@@ -240,7 +240,7 @@ def train_model(net, params, sample, num_steps):
 
         return utilization
 
-    #@jax.jit
+    @jax.jit
     def mode_switch_p(wcets_lo, wcets_hi):
 
         random_acet = jnp.expand_dims(jnp.asarray(np.random.uniform(0.2, 1/3, jnp.size(wcets_lo)), dtype=jnp.float32), axis=1)
@@ -253,7 +253,7 @@ def train_model(net, params, sample, num_steps):
         p_sys = 1 - jnp.prod(1-jnp.asarray(p_task))
         return p_sys
 
-    #@jax.jit
+    @jax.jit
     def prediction_loss(params, sample):
         # implement proper loss calculation
         wcets_d = net.apply(params, sample)
@@ -269,7 +269,7 @@ def train_model(net, params, sample, num_steps):
     opt_init, opt_update = optax.adam(2e-4)
     opt_state = opt_init(params)
 
-    #@jax.jit
+    @jax.jit
     def update(params, opt_state, sample):
         g = jax.grad(prediction_loss)(params, sample)
         updates, opt_state = opt_update(g, opt_state)
