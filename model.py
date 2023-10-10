@@ -236,26 +236,23 @@ def train_model(net, params, sample, num_steps):
     def utilization(wcets_lo):
         #do magic
 
-        utilization = jnp.sum(wcets_lo)/4000
+        utilization = jnp.divide(np.sum(wcets_lo),4000)
 
         return utilization
 
     #@jax.jit
     def mode_switch_p(wcets_lo, wcets_hi):
-        # do magic
-        p_task = jnp.zeros_like(wcets_lo)
-        i = 0
 
-        for wcet_lo, wcet_hi in zip(wcets_lo, wcets_hi):
-            acet = wcet_hi*random.uniform(0.2, 1/3)
-            d = wcet_hi*random.uniform(0.1,0.2)
-            n=(wcet_lo-acet)/d
-            n=n.astype(int)
-            p_task = p_task.at[i].set(1/(1+jnp.power(n, 2)))
-            i = i + 1
+        random_acet = jnp.expand_dims(jnp.asarray(np.random.uniform(0.2, 1/3, jnp.size(wcets_lo)), dtype=jnp.float32), axis=1)
+        acet = jnp.multiply(wcets_hi, random_acet)
+        d_random = jnp.expand_dims(jnp.asarray(np.random.uniform(0.1, 0.2, jnp.size(wcets_lo)),dtype=jnp.float32), axis=1)
+        d = jnp.multiply(wcets_hi, d_random)
+        n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo, acet), d), dtype=jnp.int32)
+        p_task = jnp.divide(1,jnp.add(1,jnp.power(n,2)))
 
         p_sys = 1 - jnp.prod(1-jnp.asarray(p_task))
         return p_sys
+
     #@jax.jit
     def prediction_loss(params, sample):
         # implement proper loss calculation
@@ -267,7 +264,6 @@ def train_model(net, params, sample, num_steps):
         util = utilization(wcets_lo)
         p = mode_switch_p(wcets_lo, wcets_hi)
         loss = (1 - util*(1-p))
-
         return loss
 
     opt_init, opt_update = optax.adam(2e-4)
@@ -279,12 +275,27 @@ def train_model(net, params, sample, num_steps):
         updates, opt_state = opt_update(g, opt_state)
         return optax.apply_updates(params, updates), opt_state
 
-    for step in range(num_steps):
+    step=0
+    min_loss = 1
+    params_best = 0
+    while num_steps>0:
         params, opt_state = update(params, opt_state, sample)
         loss = prediction_loss(params, sample)
         print("step: %d, loss: %f" % (step, loss))
+        step += 1
+        if loss < min_loss:
+            num_steps -= 1
+            params_best=params
+            min_loss = loss
 
-    return params
+    return params_best
+
+
+def predict_model(net, params, sample):
+    wcets_d = net.apply(params, sample)
+    optimal_wcets = jnp.multiply(1-wcets_d, jnp.expand_dims(sample.node_features[:, 1], axis=1))
+
+    return optimal_wcets
 
 
 

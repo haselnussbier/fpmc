@@ -102,8 +102,9 @@ net, params = init_net(model_config=model_config, sample=sample)
 trained_params = train_model(net=net,
                        params=params,
                        sample=example_graph,
-                       num_steps=10000)
+                       num_steps=100)
 
-# optimal_wcets=predict_model()
+optimal_wcets=predict_model()
+print(optimal_wcets)
 
 
