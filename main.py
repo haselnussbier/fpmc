@@ -1,5 +1,3 @@
-import numpy as np
-
 from model import *
 import xmltodict
 
@@ -93,9 +91,9 @@ exampleGraph = Graph(node_features=jnp.asarray([jnp.asarray([1, 2, 3], dtype=jnp
 """
 model_config = ModelConfig(
     propagation_steps=2,
-    num_hidden_size=8,
-    num_hidden_neurons=8,
-    num_hidden_layers=2
+    num_hidden_size=16,
+    num_hidden_neurons=16,
+    num_hidden_layers=8
 )
 sample = example_graph
 
@@ -104,7 +102,7 @@ net, params = init_net(model_config=model_config, sample=sample)
 trained_params = train_model(net=net,
                        params=params,
                        sample=example_graph,
-                       num_steps=100)
+                       num_steps=10000)
 
 # optimal_wcets=predict_model()
 

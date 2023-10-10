@@ -232,50 +232,48 @@ def init_net(model_config, sample):
 
 def train_model(net, params, sample, num_steps):
 
-    #@jax.jit
-    def utilization(wcets, sample):
+    @jax.jit
+    def utilization(wcets_lo):
         #do magic
-        utilization = jnp.sum(wcets)/2000
+
+        utilization = jnp.sum(wcets_lo)/4000
 
         return utilization
 
-    #@jax.jit
-    def mode_switch_p(wcets, sample):
+    @jax.jit
+    def mode_switch_p(wcets_lo, wcets_hi):
         # do magic
-        p_task = jnp.zeros_like(wcets)
+        p_task = jnp.zeros_like(wcets_lo)
         i = 0
-        for wcet_lo, nf in zip(wcets, sample.node_features):
-            acet = nf[1]*random.uniform(0.2, 1/3)
-            d = nf[1]*random.uniform(0.1,0.2)
+
+        for wcet_lo, wcet_hi in zip(wcets_lo, wcets_hi):
+            acet = wcet_hi*random.uniform(0.2, 1/3)
+            d = wcet_hi*random.uniform(0.1,0.2)
             n=(wcet_lo-acet)/d
             n=n.astype(int)
-            if n<0:
-                p_task = p_task.at[i].set(jnp.asarray([1], dtype=jnp.float32))
-            else:
-                p_task = p_task.at[i].set(1/(1+jnp.power(n, 2)))
+            p_task = p_task.at[i].set(jnp.asarray([1], dtype=jnp.float32))
             i = i + 1
-        p_task = jnp.asarray(p_task)
-        p_task = 1 - p_task
-        p_task = jnp.prod(p_task)
-        p_sys = 1 - p_task
-        #p_sys = 1 - jnp.prod(1-jnp.asarray(p_task))
+
+        p_sys = 1 - jnp.prod(1-jnp.asarray(p_task))
         return p_sys
-    #@jax.jit
+    @jax.jit
     def prediction_loss(params, sample):
         # implement proper loss calculation
-        wcets = jnp.abs(net.apply(params, sample))*300
-        util = utilization(wcets, sample)
-        p = mode_switch_p(wcets, sample)
-        loss = (util - util*(1-p))*100
-        print(wcets)
-        print(util)
-        print(p)
+        wcets_d = net.apply(params, sample)
+        wcets_hi = jnp.expand_dims(sample.node_features[:, 1], axis=1)
+        wcets_d = 1 - wcets_d
+        wcets_lo = jnp.multiply(wcets_d, wcets_hi)
+
+        util = utilization(wcets_lo)
+        p = mode_switch_p(wcets_lo, wcets_hi)
+        loss = (1 - util*(1-p))
+
         return loss
 
     opt_init, opt_update = optax.adam(2e-4)
     opt_state = opt_init(params)
 
-    #@jax.jit
+    @jax.jit
     def update(params, opt_state, sample):
         g = jax.grad(prediction_loss)(params, sample)
         updates, opt_state = opt_update(g, opt_state)
