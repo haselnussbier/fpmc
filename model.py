@@ -232,7 +232,7 @@ def init_net(model_config, sample):
 
 def train_model(net, params, sample, num_steps):
 
-    @jax.jit
+    #@jax.jit
     def prediction_loss(params, sample):
 
         # model returns values (ret) between -1 and 1
@@ -269,7 +269,7 @@ def train_model(net, params, sample, num_steps):
     opt_init, opt_update = optax.adam(2e-4)
     opt_state = opt_init(params)
 
-    @jax.jit
+    #@jax.jit
     def update(params, opt_state, sample):
         g = jax.grad(prediction_loss)(params, sample)
         updates, opt_state = opt_update(g, opt_state)
