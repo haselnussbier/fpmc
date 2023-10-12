@@ -233,21 +233,18 @@ def init_net(model_config, sample):
 def train_model(net, params, sample, num_steps):
 
     @jax.jit
-    def utilization(wcets_lo):
+    def utilization(wcets_lo, wcets_hi):
         #do magic
 
-        utilization = jnp.divide(np.sum(wcets_lo),4000)
+        utilization_lo = 1 - jnp.divide(jnp.sum(wcets_lo), 4000)
+        #utilization_hi = 1 - jnp.divide(np.sum(wcets_hi), 4000)
 
-        return utilization
+        return utilization_lo
 
     @jax.jit
-    def mode_switch_p(wcets_lo, wcets_hi):
+    def mode_switch_p(wcets_lo, acets, st_ds):
 
-        random_acet = jnp.expand_dims(jnp.asarray(np.random.uniform(0.2, 1/3, jnp.size(wcets_lo)), dtype=jnp.float32), axis=1)
-        acet = jnp.multiply(wcets_hi, random_acet)
-        d_random = jnp.expand_dims(jnp.asarray(np.random.uniform(0.1, 0.2, jnp.size(wcets_lo)),dtype=jnp.float32), axis=1)
-        d = jnp.multiply(wcets_hi, d_random)
-        n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo, acet), d), dtype=jnp.int32)
+        n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo, acets), st_ds), dtype=jnp.int32)
         p_task = jnp.divide(1,jnp.add(1,jnp.power(n,2)))
 
         p_sys = 1 - jnp.prod(1-jnp.asarray(p_task))
@@ -255,14 +252,24 @@ def train_model(net, params, sample, num_steps):
 
     @jax.jit
     def prediction_loss(params, sample):
-        # implement proper loss calculation
-        wcets_d = net.apply(params, sample)
-        wcets_hi = jnp.expand_dims(sample.node_features[:, 1], axis=1)
-        wcets_d = 1 - wcets_d
-        wcets_lo = jnp.multiply(wcets_d, wcets_hi)
 
-        util = utilization(wcets_lo)
-        p = mode_switch_p(wcets_lo, wcets_hi)
+        # model returns values (ret) between -1 and 1
+        # these values represent how the wcet_hi should change, wcet_lo = wcet_hi * wcet_p
+        # return value < 1 -> wcet_p > 1 -> wcet_low increases by percentage abs(ret)
+        # return value > 1 -> wcet_p < 1 -> wcet_low decreases by percentage ret
+        wcets_p = 1 - net.apply(params, sample)
+
+        # get given high-wcets of each task from graph
+        wcets_hi = jnp.expand_dims(sample.node_features[:, 1], axis=1)
+        # calculate low-wcets for each task based on model returns
+        wcets_lo = jnp.multiply(wcets_p, wcets_hi)
+        # get given acet of each task from graph
+        acets = jnp.expand_dims(sample.node_features[:, 2], axis=1)
+        # get given standard deviation of each task from graph
+        st_ds = jnp.expand_dims(sample.node_features[:, 3], axis=1)
+
+        util = utilization(wcets_lo, wcets_hi)
+        p = mode_switch_p(wcets_lo, acets, st_ds)
         loss = (1 - util*(1-p))
         return loss
 
@@ -278,24 +285,36 @@ def train_model(net, params, sample, num_steps):
     step=0
     min_loss = 1
     params_best = 0
-    while num_steps>0:
+    steps_to_stop = num_steps
+    while steps_to_stop > 0:
         params, opt_state = update(params, opt_state, sample)
         loss = prediction_loss(params, sample)
         print("step: %d, loss: %f" % (step, loss))
         step += 1
         if loss < min_loss:
-            num_steps -= 1
+            steps_to_stop = num_steps
             params_best=params
             min_loss = loss
+        else:
+            steps_to_stop -= 1
 
     return params_best
 
 
 def predict_model(net, params, sample):
-    wcets_d = net.apply(params, sample)
-    optimal_wcets = jnp.multiply(1-wcets_d, jnp.expand_dims(sample.node_features[:, 1], axis=1))
 
-    return optimal_wcets
+    wcets_p = 1 - net.apply(params, sample)
+    wcets_hi = jnp.expand_dims(sample.node_features[:, 1], axis=1)
+    wcets_lo = jnp.multiply(wcets_p, wcets_hi)
+    acets = jnp.expand_dims(sample.node_features[:, 2], axis=1)
+    st_ds = jnp.expand_dims(sample.node_features[:, 3], axis=1)
+
+    util = 1 - jnp.divide(jnp.sum(wcets_lo), 4000)
+    n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo, acets), st_ds), dtype=jnp.int32)
+    p_task = jnp.divide(1, jnp.add(1, jnp.power(n, 2)))
+    p = 1 - jnp.prod(1 - jnp.asarray(p_task))
+
+    return wcets_lo, util, p
 
 
 

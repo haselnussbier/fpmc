@@ -2,6 +2,7 @@ __pycache__
 .python-version
 .idea
 .idea 2
+.DS_Store
 graphs/Benchmarks/genned1
 graphs/Benchmarks/100
 graphs/Benchmarks/2&4Cores/c2

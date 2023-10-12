@@ -1,3 +1,5 @@
+import random
+
 from model import *
 import xmltodict
 
@@ -42,14 +44,26 @@ def build_levels(ports: Dict):
 dict = xmltodict.parse(open("graphs/Benchmarks/2&4Cores/c4/100/test-2.0-0.xml").read())
 
 order = build_levels(dict['mcsystem']['mcdag']['ports']['port'])
-node_features = np.zeros(shape=(len(dict['mcsystem']['mcdag']['actor']), 2))
+node_features = np.zeros(shape=(len(dict['mcsystem']['mcdag']['actor']), 4))
 
 for actor in dict['mcsystem']['mcdag']['actor']:
+
+    # Create NodeFeatures:
+    # Criticality
+    # wcet_hi
+    # acet
+    # Standard deviation
     if actor['wcet'][0]['#text'] == actor['wcet'][1]['#text']:
-        node_features[order.index(actor['@name'])] = jnp.asarray([[0, float(actor['wcet'][1]['#text'])]])
+        node_features[order.index(actor['@name'])] = jnp.asarray([[0,
+                                                                   float(actor['wcet'][1]['#text']),
+                                                                   float(actor['wcet'][1]['#text'])*random.uniform(0.2, 1/3),
+                                                                   float(actor['wcet'][1]['#text'])* random.uniform(0.1,0.2)]])
         #node_features = jnp.append(node_features, jnp.asarray([[1, float(actor['maxpow'][0]['@number']), float(actor['maxpow'][1]['@number'])]], dtype=jnp.float32), axis=0)
     else:
-        node_features[order.index(actor['@name'])] = jnp.asarray([[1, float(actor['wcet'][1]['#text'])]])
+        node_features[order.index(actor['@name'])] = jnp.asarray([[1,
+                                                                   float(actor['wcet'][1]['#text']),
+                                                                   float(actor['wcet'][1]['#text'])*random.uniform(0.2, 1/3),
+                                                                   float(actor['wcet'][1]['#text'])* random.uniform(0.1,0.2)]])
         #node_features = jnp.append(node_features, jnp.asarray([[0, float(actor['maxpow'][0]['@number']), float(actor['maxpow'][1]['@number'])]], dtype=jnp.float32), axis=0)
 
     #node_values[order.index(actor['@name'])] = jnp.asarray([[float(actor['wcet'][0]['#text']), float(actor['wcet'][1]['#text'])]])
@@ -100,11 +114,15 @@ sample = example_graph
 net, params = init_net(model_config=model_config, sample=sample)
 
 trained_params = train_model(net=net,
-                       params=params,
-                       sample=example_graph,
-                       num_steps=100)
+                             params=params,
+                             sample=example_graph,
+                             num_steps=100)
 
-optimal_wcets=predict_model()
-print(optimal_wcets)
+optimal_wcets, utilization, p_task_overrun=predict_model(net, trained_params, sample)
 
+print("*****************************************")
+print("Optimal wcet's for the graph: ",optimal_wcets)
+print("Have utilization of: ", utilization)
+print("And a probability of task overrun of: ", p_task_overrun)
+print("*****************************************")
 
