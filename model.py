@@ -233,24 +233,6 @@ def init_net(model_config, sample):
 def train_model(net, params, sample, num_steps):
 
     @jax.jit
-    def utilization(wcets_lo, wcets_hi):
-        #do magic
-
-        utilization_lo = 1 - jnp.divide(jnp.sum(wcets_lo), 4000)
-        #utilization_hi = 1 - jnp.divide(np.sum(wcets_hi), 4000)
-
-        return utilization_lo
-
-    @jax.jit
-    def mode_switch_p(wcets_lo, acets, st_ds):
-
-        n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo, acets), st_ds), dtype=jnp.int32)
-        p_task = jnp.divide(1,jnp.add(1,jnp.power(n,2)))
-
-        p_sys = 1 - jnp.prod(1-jnp.asarray(p_task))
-        return p_sys
-
-    @jax.jit
     def prediction_loss(params, sample):
 
         # model returns values (ret) between -1 and 1
@@ -268,8 +250,19 @@ def train_model(net, params, sample, num_steps):
         # get given standard deviation of each task from graph
         st_ds = jnp.expand_dims(sample.node_features[:, 3], axis=1)
 
-        util = utilization(wcets_lo, wcets_hi)
-        p = mode_switch_p(wcets_lo, acets, st_ds)
+        # ----------------------------
+        # Calculate Utilization:
+
+        util = 1 - jnp.divide(jnp.sum(wcets_lo), 4000)
+
+        # ----------------------------
+        # Calculate p_task_overrun:
+
+        n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo, acets), st_ds), dtype=jnp.int32)
+        p_task = jnp.divide(1, jnp.add(1, jnp.power(n, 2)))
+        p = 1 - jnp.prod(1 - jnp.asarray(p_task))
+
+
         loss = (1 - util*(1-p))
         return loss
 
