@@ -1,0 +1,15 @@
+model:
+  neurons: 4
+  layers: 4
+  hidden_size: 4
+
+graphs:
+  levels: 2
+  tasks: 50
+  dags: 1
+  cores: 2
+  edge: 15
+
+set: 5
+
+single: True

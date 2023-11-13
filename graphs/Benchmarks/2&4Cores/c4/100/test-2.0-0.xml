@@ -467,4 +467,5 @@
     </mcdag>
     <cores number="2"/>
     <levels number="2"/>
+    <schedule name="hybrid"/>
 </mcsystem>

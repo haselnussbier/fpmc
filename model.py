@@ -7,6 +7,10 @@ import jax.tree_util as tree
 import numpy as np
 import optax
 import random
+import os
+import time
+import pandas as pd
+from pandas import *
 
 NodeValue = jnp.ndarray
 NodeFeatures = jnp.ndarray
@@ -22,6 +26,10 @@ class Graph(NamedTuple):
     node_features: NodeFeatures
     node_values: NodeValue
     steps: AnyNested
+
+    # additional information not included in calculations
+    deadline: int
+    leftover_time: int
 
 
 class Step(NamedTuple):
@@ -39,7 +47,7 @@ def Init(i_fn: IFn):
             new_wcets.append(new_wcet)
         """
         new_wcets = jax.tree_map(lambda x: i_fn(x), node_features)
-        return graph._replace(node_values=jnp.asarray(new_wcets))
+        return graph._replace(node_values=jnp.asarray(new_wcets, dtype=jnp.float64))
 
     return _Init
 
@@ -226,7 +234,19 @@ def init_net(model_config, sample):
     net = Model(model_config)
     net_def = net.get_net_definition()
     net = hk.without_apply_rng(hk.transform(net_def))
-    params = net.init(jax.random.PRNGKey(42), sample)
+    params = 0
+    test = False
+    if test:
+        for i in range(100):
+            print(i)
+            params = net.init(jax.random.PRNGKey(i), sample)
+            output = net.apply(params, sample)
+            wcets_p = jnp.subtract(1, output)
+            wcets_hi = jnp.expand_dims(sample.node_features[:, 1], axis=1)
+            wcets_lo = jnp.asarray(jnp.multiply(wcets_p, wcets_hi), dtype=jnp.int32)
+            print(wcets_lo)
+    else:
+        params = net.init(jax.random.PRNGKey(69), sample)
     return net, params
 
 
@@ -239,7 +259,8 @@ def train_model(net, params, sample, num_steps):
         # these values represent how the wcet_hi should change, wcet_lo = wcet_hi * wcet_p
         # return value < 1 -> wcet_p > 1 -> wcet_low increases by percentage abs(ret)
         # return value > 1 -> wcet_p < 1 -> wcet_low decreases by percentage ret
-        wcets_p = 1 - net.apply(params, sample)
+        output = net.apply(params, sample)
+        wcets_p = jnp.subtract(1, output)
 
         # get given high-wcets of each task from graph
         wcets_hi = jnp.expand_dims(sample.node_features[:, 1], axis=1)
@@ -253,7 +274,9 @@ def train_model(net, params, sample, num_steps):
         # ----------------------------
         # Calculate Utilization:
 
-        util = 1 - jnp.divide(jnp.sum(wcets_lo), 4000)
+        wcets_sum = jnp.sum(wcets_lo)
+        leftover = sample.deadline - wcets_sum
+        util = (sample.leftover_time - leftover)/sample.leftover_time
 
         # ----------------------------
         # Calculate p_task_overrun:
@@ -265,15 +288,16 @@ def train_model(net, params, sample, num_steps):
 
         loss = (1 - util*(1-p))
         return loss
+        #return jnp.abs(jnp.sum(net.apply(params, sample)))
 
-    opt_init, opt_update = optax.adam(2e-4)
+    opt_init, opt_update = optax.adam(2e-3)
     opt_state = opt_init(params)
-
     #@jax.jit
     def update(params, opt_state, sample):
         g = jax.grad(prediction_loss)(params, sample)
-        updates, opt_state = opt_update(g, opt_state)
-        return optax.apply_updates(params, updates), opt_state
+        updates, opt_state = opt_update(g, opt_state, params)
+        a = optax.apply_updates(params, updates)
+        return a, opt_state
 
     step=0
     min_loss = 1
@@ -298,11 +322,14 @@ def predict_model(net, params, sample):
 
     wcets_p = 1 - net.apply(params, sample)
     wcets_hi = jnp.expand_dims(sample.node_features[:, 1], axis=1)
-    wcets_lo = jnp.multiply(wcets_p, wcets_hi)
+    wcets_lo = jnp.asarray(jnp.multiply(wcets_p, wcets_hi), dtype=jnp.int32)
     acets = jnp.expand_dims(sample.node_features[:, 2], axis=1)
     st_ds = jnp.expand_dims(sample.node_features[:, 3], axis=1)
 
-    util = 1 - jnp.divide(jnp.sum(wcets_lo), 4000)
+    wcets_sum = jnp.sum(wcets_lo)
+    leftover = sample.deadline - wcets_sum
+    util = (sample.leftover_time - leftover) / sample.leftover_time
+
     n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo, acets), st_ds), dtype=jnp.int32)
     p_task = jnp.divide(1, jnp.add(1, jnp.power(n, 2)))
     p = 1 - jnp.prod(1 - jnp.asarray(p_task))
