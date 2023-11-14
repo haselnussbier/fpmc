@@ -13,3 +13,7 @@ graphs:
 set: 5
 
 single: True
+
+learning_rate: 1e-2
+
+steps_to_stop: 50

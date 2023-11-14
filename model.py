@@ -3,14 +3,7 @@ from typing import *
 import haiku as hk
 import jax
 import jax.numpy as jnp
-import jax.tree_util as tree
-import numpy as np
 import optax
-import random
-import os
-import time
-import pandas as pd
-from pandas import *
 
 NodeValue = jnp.ndarray
 NodeFeatures = jnp.ndarray
@@ -51,9 +44,9 @@ def Init(i_fn: IFn):
 
     return _Init
 
+
 def Collect(c_fn: CFn):
     def _Collect(graph: Graph, step: Step):
-
         sender = step.sender
         receiver = step.receiver
         wcets = graph.node_values
@@ -73,9 +66,9 @@ def Collect(c_fn: CFn):
 
     return _Collect
 
+
 def Apply(a_fn: AFn):
     def _Apply(graph: Graph, step: Step):
-
         receiver = step.receiver
         wcets = graph.node_values
         nf = graph.node_features
@@ -95,6 +88,7 @@ def Apply(a_fn: AFn):
 
     return _Apply
 
+
 def Output(r_fn: RFn):
     def _Output(graph: Graph):
         # reduce wcets to singular value
@@ -108,12 +102,10 @@ def Output(r_fn: RFn):
         new_wcets = jax.tree_map(lambda x: r_fn(x), wcets)
         return graph._replace(node_values=new_wcets)
 
-
     return _Output
 
 
 class ModelConfig(NamedTuple):
-    propagation_steps: int
     num_hidden_layers: int
     num_hidden_neurons: int
     num_hidden_size: int
@@ -142,7 +134,6 @@ class ModelBase:
 
 class Model(ModelBase):
     def __init__(self, model_config):
-        self.propagation_steps = model_config.propagation_steps
         self.num_hidden_layers = model_config.num_hidden_layers
         self.num_hidden_neurons = model_config.num_hidden_neurons
         self.num_hidden_size = model_config.num_hidden_size
@@ -216,7 +207,7 @@ class Model(ModelBase):
             if debug_mode:
                 n_steps = len(graph.steps)
                 for i in range(n_steps):
-                    step = graph.steps[i] # jax.tree_map(lambda x: x[i], graph.steps)
+                    step = graph.steps[i]  # jax.tree_map(lambda x: x[i], graph.steps)
                     graph, _ = f_scan(graph, step)
             else:
                 graph, extra = hk.scan(f_scan, graph, graph.steps)
@@ -250,9 +241,8 @@ def init_net(model_config, sample):
     return net, params
 
 
-def train_model(net, params, sample, num_steps):
-
-    #@jax.jit
+def train_model(net, params, sample, num_steps, learning_rate):
+    # @jax.jit
     def prediction_loss(params, sample):
 
         # model returns values (ret) between -1 and 1
@@ -276,7 +266,7 @@ def train_model(net, params, sample, num_steps):
 
         wcets_sum = jnp.sum(wcets_lo)
         leftover = sample.deadline - wcets_sum
-        util = (sample.leftover_time - leftover)/sample.leftover_time
+        util = (sample.leftover_time - leftover) / sample.leftover_time
 
         # ----------------------------
         # Calculate p_task_overrun:
@@ -285,21 +275,21 @@ def train_model(net, params, sample, num_steps):
         p_task = jnp.divide(1, jnp.add(1, jnp.power(n, 2)))
         p = 1 - jnp.prod(1 - jnp.asarray(p_task))
 
-
-        loss = (1 - util*(1-p))
+        loss = (1 - util * (1 - p))
         return loss
-        #return jnp.abs(jnp.sum(net.apply(params, sample)))
+        # return jnp.abs(jnp.sum(net.apply(params, sample)))
 
-    opt_init, opt_update = optax.adam(2e-3)
+    opt_init, opt_update = optax.adam(learning_rate)
     opt_state = opt_init(params)
-    #@jax.jit
+
+    # @jax.jit
     def update(params, opt_state, sample):
         g = jax.grad(prediction_loss)(params, sample)
         updates, opt_state = opt_update(g, opt_state, params)
         a = optax.apply_updates(params, updates)
         return a, opt_state
 
-    step=0
+    step = 0
     min_loss = 1
     params_best = 0
     steps_to_stop = num_steps
@@ -310,7 +300,7 @@ def train_model(net, params, sample, num_steps):
         step += 1
         if loss < min_loss:
             steps_to_stop = num_steps
-            params_best=params
+            params_best = params
             min_loss = loss
         else:
             steps_to_stop -= 1
@@ -319,7 +309,6 @@ def train_model(net, params, sample, num_steps):
 
 
 def predict_model(net, params, sample):
-
     wcets_p = 1 - net.apply(params, sample)
     wcets_hi = jnp.expand_dims(sample.node_features[:, 1], axis=1)
     wcets_lo = jnp.asarray(jnp.multiply(wcets_p, wcets_hi), dtype=jnp.int32)
@@ -335,6 +324,3 @@ def predict_model(net, params, sample):
     p = 1 - jnp.prod(1 - jnp.asarray(p_task))
 
     return wcets_lo, util, p
-
-
-
