@@ -3,6 +3,23 @@ import yaml
 from generator import *
 from model import *
 
+
+def pad_steps(graphs: list):
+    max_steps = 0
+    for graph in graphs:
+        if len(graph.steps) > max_steps:
+            max_steps = len(graph.steps)
+    for graph in graphs:
+        while len(graph.steps) < max_steps:
+            graph.steps.append(Step(jnp.asarray([], dtype=jnp.int8), jnp.asarray([], dtype=jnp.int8)))
+    return graphs
+
+def batch(graphs: list, batch_size: int):
+    graphs = pad_steps(graphs)
+    batched_graphs = list()
+    return batched_graphs
+
+
 with open("config.yml", "r") as file:
     config = yaml.safe_load(file)
 
@@ -22,11 +39,15 @@ sample = train_set[0]
 
 net, params = init_net(model_config=model_config, sample=sample)
 
+batch_size=10
+
+# train_set = batch(train_set, batch_size)
+
 trained_params = train_model(net=net,
                              params=params,
                              sample=sample,
                              num_steps=config['steps_to_stop'],
-                             learning_rate=config['learning_rate'])
+                             learning_rate=float(config['learning_rate']))
 
 optimal_wcets, utilization, p_task_overrun = predict_model(net, trained_params, sample)
 

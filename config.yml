@@ -1,7 +1,7 @@
 model:
-  neurons: 4
+  neurons: 16
   layers: 4
-  hidden_size: 4
+  hidden_size: 16
 
 graphs:
   levels: 2
@@ -16,4 +16,4 @@ single: True
 
 learning_rate: 1e-2
 
-steps_to_stop: 50
+steps_to_stop: 10

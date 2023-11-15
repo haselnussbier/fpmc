@@ -299,17 +299,20 @@ def train_model(net, params, sample, num_steps, learning_rate):
         print("step: %d, loss: %f" % (step, loss))
         step += 1
         if loss < min_loss:
+
             steps_to_stop = num_steps
             params_best = params
             min_loss = loss
+            print("improved")
         else:
             steps_to_stop -= 1
+            print("not improved, steps left: ", steps_to_stop)
 
     return params_best
 
 
 def predict_model(net, params, sample):
-    wcets_p = 1 - net.apply(params, sample)
+    wcets_p = jnp.subtract(1, net.apply(params, sample))
     wcets_hi = jnp.expand_dims(sample.node_features[:, 1], axis=1)
     wcets_lo = jnp.asarray(jnp.multiply(wcets_p, wcets_hi), dtype=jnp.int32)
     acets = jnp.expand_dims(sample.node_features[:, 2], axis=1)
