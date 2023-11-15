@@ -4,6 +4,7 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 import optax
+from plot import instantiate_training_csv, write_data
 
 NodeValue = jnp.ndarray
 NodeFeatures = jnp.ndarray
@@ -242,9 +243,9 @@ def init_net(model_config, sample):
 
 
 def train_model(net, params, sample, num_steps, learning_rate):
-    # @jax.jit
-    def prediction_loss(params, sample):
 
+    # @jax.jit
+    def get_metrics(params, sample):
         # model returns values (ret) between -1 and 1
         # these values represent how the wcet_hi should change, wcet_lo = wcet_hi * wcet_p
         # return value < 1 -> wcet_p > 1 -> wcet_low increases by percentage abs(ret)
@@ -275,9 +276,40 @@ def train_model(net, params, sample, num_steps, learning_rate):
         p_task = jnp.divide(1, jnp.add(1, jnp.power(n, 2)))
         p = 1 - jnp.prod(1 - jnp.asarray(p_task))
 
+        return wcets_lo, util, p
+    # @jax.jit
+    def prediction_loss(params, sample):
+        # model returns values (ret) between -1 and 1
+        # these values represent how the wcet_hi should change, wcet_lo = wcet_hi * wcet_p
+        # return value < 1 -> wcet_p > 1 -> wcet_low increases by percentage abs(ret)
+        # return value > 1 -> wcet_p < 1 -> wcet_low decreases by percentage ret
+        output = net.apply(params, sample)
+        wcets_p = jnp.subtract(1, output)
+
+        # get given high-wcets of each task from graph
+        wcets_hi = jnp.expand_dims(sample.node_features[:, 1], axis=1)
+        # calculate low-wcets for each task based on model returns
+        wcets_lo = jnp.multiply(wcets_p, wcets_hi)
+        # get given acet of each task from graph
+        acets = jnp.expand_dims(sample.node_features[:, 2], axis=1)
+        # get given standard deviation of each task from graph
+        st_ds = jnp.expand_dims(sample.node_features[:, 3], axis=1)
+
+        # ----------------------------
+        # Calculate Utilization:
+
+        wcets_sum = jnp.sum(wcets_lo)
+        leftover = sample.deadline - wcets_sum
+        util = (sample.leftover_time - leftover) / sample.leftover_time
+
+        # ----------------------------
+        # Calculate p_task_overrun:
+
+        n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo, acets), st_ds), dtype=jnp.int32)
+        p_task = jnp.divide(1, jnp.add(1, jnp.power(n, 2)))
+        p = 1 - jnp.prod(1 - jnp.asarray(p_task))
         loss = (1 - util * (1 - p))
         return loss
-        # return jnp.abs(jnp.sum(net.apply(params, sample)))
 
     opt_init, opt_update = optax.adam(learning_rate)
     opt_state = opt_init(params)
@@ -289,6 +321,7 @@ def train_model(net, params, sample, num_steps, learning_rate):
         a = optax.apply_updates(params, updates)
         return a, opt_state
 
+    instantiate_training_csv()
     step = 0
     min_loss = 1
     params_best = 0
@@ -296,7 +329,9 @@ def train_model(net, params, sample, num_steps, learning_rate):
     while steps_to_stop > 0:
         params, opt_state = update(params, opt_state, sample)
         loss = prediction_loss(params, sample)
+        wcets_lo, util, p = get_metrics(params, sample)
         print("step: %d, loss: %f" % (step, loss))
+        write_data([step, float(loss), float(util), float(p)])
         step += 1
         if loss < min_loss:
 
