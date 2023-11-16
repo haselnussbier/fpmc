@@ -4,7 +4,7 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 import optax
-from plot import instantiate_training_csv, write_data
+from plot import append_data, write_csv
 
 NodeValue = jnp.ndarray
 NodeFeatures = jnp.ndarray
@@ -321,7 +321,6 @@ def train_model(net, params, sample, num_steps, learning_rate):
         a = optax.apply_updates(params, updates)
         return a, opt_state
 
-    instantiate_training_csv()
     step = 0
     min_loss = 1
     params_best = 0
@@ -331,18 +330,20 @@ def train_model(net, params, sample, num_steps, learning_rate):
         loss = prediction_loss(params, sample)
         wcets_lo, util, p = get_metrics(params, sample)
         print("step: %d, loss: %f" % (step, loss))
-        write_data([step, float(loss), float(util), float(p)])
+        append_data([step, float(loss), float(util), float(p)])
         step += 1
         if loss < min_loss:
 
-            steps_to_stop = num_steps
+            #steps_to_stop = num_steps
             params_best = params
             min_loss = loss
             print("improved")
         else:
             steps_to_stop -= 1
             print("not improved, steps left: ", steps_to_stop)
+        steps_to_stop -= 1
 
+    write_csv()
     return params_best
 
 

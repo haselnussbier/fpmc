@@ -2,6 +2,7 @@ import yaml
 
 from generator import *
 from model import *
+from plot import plot
 
 
 def pad_steps(graphs: list):
@@ -48,6 +49,8 @@ trained_params = train_model(net=net,
                              sample=sample,
                              num_steps=config['steps_to_stop'],
                              learning_rate=float(config['learning_rate']))
+
+plot()
 
 optimal_wcets, utilization, p_task_overrun = predict_model(net, trained_params, sample)
 
