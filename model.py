@@ -333,15 +333,13 @@ def train_model(net, params, sample, num_steps, learning_rate):
         append_data([step, float(loss), float(util), float(p)])
         step += 1
         if loss < min_loss:
-
-            #steps_to_stop = num_steps
+            steps_to_stop = num_steps
             params_best = params
             min_loss = loss
             print("improved")
         else:
             steps_to_stop -= 1
             print("not improved, steps left: ", steps_to_stop)
-        steps_to_stop -= 1
 
     write_csv()
     return params_best
