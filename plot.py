@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib
 from matplotlib import pyplot as plt
 import os
-matplotlib.use("TkAgg")
+matplotlib.use("Agg")
 DATA = list()
 TIMESTAMP: str
 
