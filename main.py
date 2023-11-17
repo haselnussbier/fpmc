@@ -79,31 +79,31 @@ if options.help:
     sys.exit()
 
 if not (options.layer is None):
-   config['model']['layers'] = options.layer
+    config['model']['layers'] = options.layer
 
 if not (options.neuron is None):
-   config['model']['neurons'] = options.neuron
+    config['model']['neurons'] = options.neuron
 
 if not (options.hidden_size is None):
-   config['model']['hidden_size'] = options.hidden_size
+    config['model']['hidden_size'] = options.hidden_size
 
 if not (options.core is None):
-   config['graph']['cores'] = options.core
+    config['graph']['cores'] = options.core
 
 if not (options.task is None):
-   config['graph']['tasks'] = options.task
+    config['graph']['tasks'] = options.task
 
 if not (options.edge is None):
-   config['graph']['edge'] = options.edge
+    config['graph']['edge'] = options.edge
 
 if not (options.training_set is None):
-   config['training_set'] = options.training_set
+    config['training_set'] = options.training_set
 
 if not (options.steps_to_stop is None):
-   config['model']['steps_to_stop'] = options.steps_to_stop
+    config['model']['steps_to_stop'] = options.steps_to_stop
 
 if not (options.learning_rate is None):
-   config['model']['learning_rate'] = options.learning_rate
+    config['model']['learning_rate'] = options.learning_rate
 
 
 train_set, validate_set = generate_sets(nTasks=config['graphs']['tasks'],
