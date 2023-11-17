@@ -2,18 +2,15 @@ model:
   neurons: 16
   layers: 4
   hidden_size: 16
+  steps_to_stop: 20
+  learning_rate: 1e-3
 
 graphs:
-  levels: 2
   tasks: 50
   dags: 1
   cores: 2
   edge: 15
 
-set: 5
+training_set: 5
 
 single: True
-
-learning_rate: 1e-3
-
-steps_to_stop: 20

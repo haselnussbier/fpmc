@@ -4,4 +4,3 @@ __pycache__
 .idea 2
 .DS_Store
 graphs/*
-results/*.csv
