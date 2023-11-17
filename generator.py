@@ -9,6 +9,8 @@ import xmltodict
 from model import Graph, Step
 
 
+
+
 def build_levels(ports: Dict):
     dst = list()
     src = list()
@@ -59,7 +61,7 @@ def calc_leftover(schedules):
     return leftover
 
 
-def generate_sets(nLevels: int, nTasks: int, nDags: int, nCores: int, pEdge: float, set_size: int, nJobs=1, split=0.8):
+def generate_sets(nTasks: int, nDags: int, nCores: int, pEdge: float, set_size: int, nLevels=2, nJobs=1, split=0.8):
     cmd = "java -jar mcdag/generator.jar " \
           "-mu " + str(nCores - 0.9) + \
           " -nd " + str(nDags) + \
@@ -147,3 +149,22 @@ def generate_sets(nLevels: int, nTasks: int, nDags: int, nCores: int, pEdge: flo
     validate_set = graphs[int(len(graphs) * split):]
 
     return train_set, validate_set
+
+
+def pad_steps(graphs: list):
+    max_steps = 0
+    for graph in graphs:
+        if len(graph.steps) > max_steps:
+            max_steps = len(graph.steps)
+    for graph in graphs:
+        while len(graph.steps) < max_steps:
+            graph.steps.append(Step(jnp.asarray([], dtype=jnp.int8), jnp.asarray([], dtype=jnp.int8)))
+    return graphs
+
+
+def batch(graphs: list, batch_size: int):
+    graphs = pad_steps(graphs)
+    batched_graphs = list()
+    return batched_graphs
+
+
