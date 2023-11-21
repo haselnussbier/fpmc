@@ -113,7 +113,7 @@ def generate_sets(nTasks: int, nDags: int, nCores: int, pEdge: float, set_size: 
                                                                            int(float(actor['wcet'][0][
                                                                                          '#text']) * random.uniform(0.1,
                                                                                                                     0.2))]],
-                                                                         dtype=jnp.float64)
+                                                                         dtype=jnp.float32)
             else:
                 node_features[order.index(actor['@name'])] = jnp.asarray([[1,
                                                                            int(actor['wcet'][1]['#text']),
@@ -123,13 +123,13 @@ def generate_sets(nTasks: int, nDags: int, nCores: int, pEdge: float, set_size: 
                                                                            int(float(actor['wcet'][1][
                                                                                          '#text']) * random.uniform(0.1,
                                                                                                                     0.2))]],
-                                                                         dtype=jnp.float64)
+                                                                         dtype=jnp.float32)
         steps = list()
         for node in order:
             for edge in dict_graph['mcsystem']['mcdag']['ports']['port']:
                 if edge['@srcActor'] == node:
-                    steps.append(Step(sender=jnp.asarray([order.index(node)], dtype=jnp.int8),
-                                      receiver=jnp.asarray([order.index(edge['@dstActor'])], dtype=jnp.int8)))
+                    steps.append(Step(sender=jnp.asarray([order.index(node)], dtype=jnp.int32),
+                                      receiver=jnp.asarray([order.index(edge['@dstActor'])], dtype=jnp.int32)))
 
         core_schedules = list()
         for i in range(nCores):
@@ -140,8 +140,8 @@ def generate_sets(nTasks: int, nDags: int, nCores: int, pEdge: float, set_size: 
         graph = Graph(node_features=jnp.asarray(node_features),
                       node_values=None,
                       steps=steps,
-                      deadline=int(dict_graph['mcsystem']['mcdag']['@deadline']) * nCores,
-                      leftover_time=leftover)
+                      deadline=[int(dict_graph['mcsystem']['mcdag']['@deadline']) * nCores],
+                      leftover_time=[leftover])
 
         graphs += [graph]
 
@@ -158,13 +158,49 @@ def pad_steps(graphs: list):
             max_steps = len(graph.steps)
     for graph in graphs:
         while len(graph.steps) < max_steps:
-            graph.steps.append(Step(jnp.asarray([], dtype=jnp.int8), jnp.asarray([], dtype=jnp.int8)))
-    return graphs
+            graph.steps.append(Step(jnp.asarray([], dtype=jnp.int32), jnp.asarray([], dtype=jnp.int32)))
+    return graphs, max_steps
 
 
 def batch(graphs: list, batch_size: int):
-    graphs = pad_steps(graphs)
+
     batched_graphs = list()
+    for batch in range(0, len(graphs), batch_size):
+        next_batch = graphs[batch: batch + batch_size]
+        next_batch, max_steps = pad_steps(next_batch)
+        if len(next_batch) < batch_size:
+            continue
+        node_features = list()
+        col_steps = list()
+        deadlines = list()
+        l_times = list()
+        tasks = 0
+        for graph in next_batch:
+            tasks = len(graph.node_features)
+            node_features.append(graph.node_features)
+            col_steps.append(graph.steps)
+            deadlines.append(graph.deadline)
+            l_times.append(graph.leftover_time)
+        conc_nf = np.concatenate(node_features)
+        conc_steps = list()
+        for i in range(max_steps):
+            senders = list()
+            receivers = list()
+            for j in range(len(col_steps)):
+                offset = j*tasks
+                senders.append(col_steps[j][i].sender+offset)
+                receivers.append(col_steps[j][i].receiver+offset)
+            conc_senders = np.concatenate(senders)
+            conc_receivers = np.concatenate(receivers)
+            step = Step(sender=conc_senders, receiver=conc_receivers)
+            conc_steps.append(step)
+
+        graph = Graph(node_features=conc_nf,
+                      node_values=None,
+                      steps=conc_steps,
+                      deadline=deadlines,
+                      leftover_time=l_times)
+        batched_graphs.append(graph)
     return batched_graphs
 
 

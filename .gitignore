@@ -4,3 +4,4 @@ __pycache__
 .idea 2
 .DS_Store
 graphs/*
+*_test.py
