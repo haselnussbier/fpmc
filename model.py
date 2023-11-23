@@ -255,30 +255,45 @@ def train_model(net, params, train_set, validate_set, num_steps, learning_rate, 
 
         # get given high-wcets of each task from graph
         wcets_hi = jnp.expand_dims(sample.node_features[:, 1], axis=1)
-        wcets_hi = jnp.split(wcets_hi, batch_size)
-        # calculate low-wcets for each task based on model returns
+        # calculate new low-wcets for each task based on model returns
         wcets_lo = jnp.multiply(wcets_p, wcets_hi)
-        wcets_lo = jnp.split(wcets_lo, batch_size)
         # get given acet of each task from graph
         acets = jnp.expand_dims(sample.node_features[:, 2], axis=1)
-        acets = jnp.split(acets, batch_size)
         # get given standard deviation of each task from graph
         st_ds = jnp.expand_dims(sample.node_features[:, 3], axis=1)
-        st_ds = jnp.split(st_ds, batch_size)
+
+        # split into respective graphs (unbatch)
+        wcets_lo = jnp.asarray(jnp.split(wcets_lo, batch_size))
+        acets = jnp.asarray(jnp.split(acets, batch_size))
+        st_ds = jnp.asarray(jnp.split(st_ds, batch_size))
 
         # ----------------------------
         # Calculate Utilization:
 
         wcets_sum = jnp.sum(wcets_lo, axis=1)
-        leftover = jnp.subtract(sample.deadline - wcets_sum)
-        util = jnp.divide(jnp.subtract(sample.leftover_time, leftover), sample.leftover_time)
+        used_timeslots_old = jnp.subtract(jnp.multiply(jnp.asarray(sample.deadline), 2),
+                                          jnp.asarray(sample.leftover_time))
+        s = jnp.subtract(used_timeslots_old, wcets_sum)
+
+        # get criticality of nodes
+        crit = jnp.expand_dims(sample.node_features[:, 0], axis=1)
+        crit = jnp.asarray(jnp.split(crit, batch_size))
+
+        # get low criticality wcets
+        wcets_lc = jnp.where(crit == 0, wcets_lo, 0)
+        wcets_lc = jnp.sum(wcets_lc, axis=1)
+
+        ovr = jnp.asarray(jnp.add(jnp.asarray(s), jnp.asarray(wcets_lc)))
+        util = jnp.divide(ovr, jnp.asarray(sample.deadline))
+
+        # util = jnp.divide(jnp.subtract(jnp.asarray(sample.leftover_time), leftover), jnp.asarray(sample.leftover_time))
 
         # ----------------------------
         # Calculate p_task_overrun:
 
         n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo, acets), st_ds), dtype=jnp.int32)
         p_task = jnp.divide(1, jnp.add(1, jnp.power(n, 2)))
-        p = 1 - jnp.prod(1 - jnp.asarray(p_task))
+        p = jnp.subtract(1, jnp.product(jnp.subtract(1, p_task), axis=1))
 
         return wcets_lo, util, p
     # @jax.jit
