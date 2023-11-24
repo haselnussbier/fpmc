@@ -77,6 +77,11 @@ parser.add_option("-b",
                   type="int",
                   help="Set the batch size")
 
+parser.add_option("-j",
+                  dest="jobs",
+                  type="int",
+                  help="Set Amount of Threads for Graph generation")
+
 (options, args) = parser.parse_args()
 
 if options.help:
@@ -113,12 +118,16 @@ if not (options.learning_rate is None):
 if not (options.batch_size is None):
     config['model']['batch_size'] = options.batch_size
 
+if not (options.jobs is None):
+    config['jobs'] = options.jobs
+
 
 train_set, validate_set = generate_sets(nTasks=config['graphs']['tasks'],
                                         nDags=config['graphs']['dags'],
                                         nCores=config['graphs']['cores'],
                                         pEdge=config['graphs']['edge'],
-                                        set_size=config['training_set'])
+                                        set_size=config['training_set'],
+                                        nJobs=config['jobs'])
 
 model_config = ModelConfig(
     num_hidden_size=config['model']['hidden_size'],
