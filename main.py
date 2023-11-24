@@ -131,6 +131,7 @@ net, params = init_net(model_config=model_config, sample=sample)
 
 batched_train = batch(train_set, config['model']['batch_size'])
 batched_val = batch(validate_set, config['model']['batch_size'])
+test = batched_train.pop()
 
 trained_params = train_model(net=net,
                              params=params,
@@ -142,10 +143,10 @@ trained_params = train_model(net=net,
 
 plot()
 
-optimal_wcets, utilization, p_task_overrun = predict_model(net, trained_params, sample)
+loss, utilization, p_task_overrun = predict_model(net, trained_params, test, config['model']['batch_size'])
 
 print("*****************************************")
-print("Optimal wcet's for the graph: ", optimal_wcets)
-print("Have utilization of: ", utilization)
-print("And a probability of task overrun of: ", p_task_overrun)
+print("Test-Batch finished with a loss of  ", loss)
+print("An average utilization of ", utilization, " per Graph.")
+print("And a probability of task overrun of ", p_task_overrun, " per Graph.")
 print("*****************************************")
