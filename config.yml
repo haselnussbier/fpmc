@@ -4,6 +4,7 @@ model:
   hidden_size: 16
   steps_to_stop: 20
   learning_rate: 1e-3
+  batch_size: 5
 
 graphs:
   tasks: 50
@@ -11,6 +12,8 @@ graphs:
   cores: 2
   edge: 15
 
-training_set: 5
+training_set: 30
+
+jobs: 10
 
 single: True

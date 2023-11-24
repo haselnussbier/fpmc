@@ -11,14 +11,14 @@ with open("config.yml", "r") as file:
     config = yaml.safe_load(file)
 
 usage_str = "%prog [options]"
-description_str = "Benchmark script"
+description_str = "ML-script"
 epilog_str = "Examples"
 
-parser = optparse.OptionParser(usage = usage_str,
-                               description = description_str,
-                               epilog = epilog_str,
-                               add_help_option = False,
-                               version = "%prog version 0.1")
+parser = optparse.OptionParser(usage=usage_str,
+                               description=description_str,
+                               epilog=epilog_str,
+                               add_help_option=False,
+                               version="%prog version 0.1")
 
 
 parser.add_option('-h',
@@ -72,6 +72,16 @@ parser.add_option("-r",
                   type="float",
                   help="Set the learning rate")
 
+parser.add_option("-b",
+                  dest="batch_size",
+                  type="int",
+                  help="Set the batch size")
+
+parser.add_option("-j",
+                  dest="jobs",
+                  type="int",
+                  help="Set Amount of Threads for Graph generation")
+
 (options, args) = parser.parse_args()
 
 if options.help:
@@ -105,12 +115,19 @@ if not (options.steps_to_stop is None):
 if not (options.learning_rate is None):
     config['model']['learning_rate'] = options.learning_rate
 
+if not (options.batch_size is None):
+    config['model']['batch_size'] = options.batch_size
+
+if not (options.jobs is None):
+    config['jobs'] = options.jobs
+
 
 train_set, validate_set = generate_sets(nTasks=config['graphs']['tasks'],
                                         nDags=config['graphs']['dags'],
                                         nCores=config['graphs']['cores'],
                                         pEdge=config['graphs']['edge'],
-                                        set_size=config['training_set'])
+                                        set_size=config['training_set'],
+                                        nJobs=config['jobs'])
 
 model_config = ModelConfig(
     num_hidden_size=config['model']['hidden_size'],
@@ -121,18 +138,24 @@ sample = train_set[0]
 
 net, params = init_net(model_config=model_config, sample=sample)
 
+batched_train = batch(train_set, config['model']['batch_size'])
+batched_val = batch(validate_set, config['model']['batch_size'])
+test = batched_train.pop()
+
 trained_params = train_model(net=net,
                              params=params,
-                             sample=sample,
+                             train_set=batched_train,
+                             validate_set=batched_val[0],
                              num_steps=config['model']['steps_to_stop'],
-                             learning_rate=float(config['model']['learning_rate']))
+                             learning_rate=float(config['model']['learning_rate']),
+                             batch_size=config['model']['batch_size'])
 
 plot()
 
-optimal_wcets, utilization, p_task_overrun = predict_model(net, trained_params, sample)
+loss, utilization, p_task_overrun = predict_model(net, trained_params, test, config['model']['batch_size'])
 
 print("*****************************************")
-print("Optimal wcet's for the graph: ", optimal_wcets)
-print("Have utilization of: ", utilization)
-print("And a probability of task overrun of: ", p_task_overrun)
+print("Test-Batch finished with a loss of  ", loss)
+print("An average utilization of ", utilization, " per Graph.")
+print("And a probability of task overrun of ", p_task_overrun, " per Graph.")
 print("*****************************************")
