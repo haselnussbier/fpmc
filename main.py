@@ -1,11 +1,11 @@
+import optparse
 import sys
 
 import yaml
 
 from generator import *
 from model import *
-from plot import plot, save_config, init_result, save_model
-import optparse
+from plot import plot, save_config, init_result
 
 with open("config.yml", "r") as file:
     config = yaml.safe_load(file)
@@ -19,7 +19,6 @@ parser = optparse.OptionParser(usage=usage_str,
                                epilog=epilog_str,
                                add_help_option=False,
                                version="%prog version 0.1")
-
 
 parser.add_option('-h',
                   action='store_true',
@@ -142,8 +141,6 @@ sample = batched_train[0]
 
 net, params = init_net(model_config=model_config, sample=sample)
 
-
-
 trained_params = train_model(net=net,
                              params=params,
                              train_set=batched_train,
@@ -161,4 +158,3 @@ print("And a probability of task overrun of ", p_task_overrun, " per Graph.")
 print("*****************************************")
 
 save_config(config)
-

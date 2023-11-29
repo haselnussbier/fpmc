@@ -2,10 +2,10 @@ import os
 import random
 from typing import *
 
+import jax
 import jax.numpy as jnp
 import numpy as np
 import xmltodict
-import jax
 
 from model import Graph, Step
 
@@ -94,7 +94,7 @@ def generate_sets(nTasks: int, nDags: int, nCores: int, pEdge: float, set_size: 
         if len(order) != nTasks:
             print("Graph contains unreachable nodes")
             continue
-        node_features = np.zeros(shape=(len(dict_graph['mcsystem']['mcdag']['actor'])+1, 5))
+        node_features = np.zeros(shape=(len(dict_graph['mcsystem']['mcdag']['actor']) + 1, 5))
 
         for actor in dict_graph['mcsystem']['mcdag']['actor']:
 
@@ -104,15 +104,20 @@ def generate_sets(nTasks: int, nDags: int, nCores: int, pEdge: float, set_size: 
             # acet
             # Standard deviation
             if actor['wcet'][1]['#text'] == '0':
-                node_features[order.index(actor['@name'])] = jnp.asarray([[0, int(actor['wcet'][0]['#text']), 0, 0, 0]], dtype=jnp.float32)
+                node_features[order.index(actor['@name'])] = jnp.asarray([[0, int(actor['wcet'][0]['#text']), 0, 0, 0]],
+                                                                         dtype=jnp.float32)
 
 
             else:
                 node_features[order.index(actor['@name'])] = jnp.asarray([[1,
                                                                            int(actor['wcet'][0]['#text']),
                                                                            int(actor['wcet'][1]['#text']),
-                                                                           float(actor['wcet'][1]['#text']) * random.uniform(0.2, 1/3),
-                                                                           float(actor['wcet'][1]['#text']) * random.uniform(0.1, 0.2)]],
+                                                                           float(actor['wcet'][1][
+                                                                                     '#text']) * random.uniform(0.2,
+                                                                                                                1 / 3),
+                                                                           float(actor['wcet'][1][
+                                                                                     '#text']) * random.uniform(0.1,
+                                                                                                                0.2)]],
                                                                          dtype=jnp.float32)
         # create dummy node for padding
         node_features[-1] = jnp.asarray([[0, 0, 0, 0, 0]], dtype=jnp.float32)
@@ -149,7 +154,8 @@ def pad_steps(graphs: list):
             max_steps = len(graph.steps)
     for graph in graphs:
         while len(graph.steps) < max_steps:
-            graph.steps.append(Step(jnp.asarray([len(graph.node_features)-1], dtype=jnp.int32), jnp.asarray([len(graph.node_features)-1], dtype=jnp.int32)))
+            graph.steps.append(Step(jnp.asarray([len(graph.node_features) - 1], dtype=jnp.int32),
+                                    jnp.asarray([len(graph.node_features) - 1], dtype=jnp.int32)))
     return graphs, max_steps
 
 

@@ -1,15 +1,17 @@
 import csv
-from datetime import datetime
-import pandas as pd
-import matplotlib
-import yaml
-import jax
-from matplotlib import pyplot as plt
 import os
 import pickle
+from datetime import datetime
+
+import matplotlib
+import pandas as pd
+import yaml
+from matplotlib import pyplot as plt
+
 matplotlib.use("Agg")
 DATA = list()
 TIMESTAMP: str
+
 
 def init_result():
     now = datetime.now()
@@ -47,8 +49,8 @@ def plot():
     ax.plot('step', 'prob', data=train, color='green', label='prob')
     plt.legend(loc='best', title='legend', frameon=False)
     fig.savefig("results/" + TIMESTAMP + "/plot.png")
-    #plot_loss = p9.ggplot(train) + p9.aes('step', ['loss', 'util', 'p']) + p9.geom_line()
-    #plot_loss.save(filename="plot-"+TIMESTAMP+".pdf", path="model/results/")
+    # plot_loss = p9.ggplot(train) + p9.aes('step', ['loss', 'util', 'p']) + p9.geom_line()
+    # plot_loss.save(filename="plot-"+TIMESTAMP+".pdf", path="model/results/")
 
 
 def save_config(config: dict):
@@ -57,9 +59,6 @@ def save_config(config: dict):
         yaml.dump(config, f)
 
 
-def save_model(state):
-    trained_params = jax.experimental.optimizers.unpack_optimizer_state(state)
-    pickle.dump(trained_params, open("results/" + TIMESTAMP + "/params.pkl", "wb"))
-
-
-
+# def save_model(state):
+    # trained_params = jax.experimental.optimizers.unpack_optimizer_state(state)
+    # pickle.dump(trained_params, open("results/" + TIMESTAMP + "/params.pkl", "wb"))

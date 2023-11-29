@@ -4,6 +4,7 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 import optax
+
 from plot import append_data, write_csv, save_model
 
 NodeValue = jnp.ndarray
@@ -247,7 +248,6 @@ def init_net(model_config, sample):
 
 
 def train_model(net, params, train_set, validate_set, model_config):
-
     @jax.jit
     def get_metrics(params, sample):
         # model returns values (ret) between -1 and 1
@@ -299,8 +299,8 @@ def train_model(net, params, train_set, validate_set, model_config):
         p_task = jnp.where(crit == 1, p_task, 0)
         p_full = jnp.subtract(1, jnp.product(jnp.subtract(1, p_task), axis=1))
 
-        return jnp.divide(jnp.sum(util), model_config['batch_size']), jnp.divide(jnp.sum(p_full), model_config['batch_size'])
-
+        return jnp.divide(jnp.sum(util), model_config['batch_size']), jnp.divide(jnp.sum(p_full),
+                                                                                 model_config['batch_size'])
 
     @jax.jit
     def prediction_loss(params, sample):
@@ -317,7 +317,7 @@ def train_model(net, params, train_set, validate_set, model_config):
         wcets_hi = jnp.expand_dims(sample.node_features[:, 2], axis=1)
         acets = jnp.expand_dims(sample.node_features[:, 3], axis=1)
         st_ds = jnp.expand_dims(sample.node_features[:, 4], axis=1)
-        
+
         # calculate new wcets_lo
         wcets_lo_new = jnp.multiply(wcets_p, wcets_hi)
 
@@ -327,20 +327,20 @@ def train_model(net, params, train_set, validate_set, model_config):
         wcets_hi = jnp.asarray(jnp.split(wcets_hi, model_config['batch_size']))
         acets = jnp.asarray(jnp.split(acets, model_config['batch_size']))
         st_ds = jnp.asarray(jnp.split(st_ds, model_config['batch_size']))
-        
+
         wcets_lo_new = jnp.asarray(jnp.split(wcets_lo_new, model_config['batch_size']))
-        
+
         # Calculate Utilization:
-        
+
         # calculate difference between old and new wcets_lo_hc
         wcets_lo_hc_old = jnp.where(crit == 1, wcets_lo, 0)
         wcets_lo_hc_new = jnp.where(crit == 1, wcets_lo_new, 0)
         s = jnp.subtract(jnp.sum(wcets_lo_hc_old, axis=1), jnp.sum(wcets_lo_hc_new, axis=1))
-        
+
         # calculate overall utilization
 
         ovr = jnp.subtract(jnp.asarray(sample.deadline), jnp.sum(wcets_lo_new, axis=1))
-        
+
         # utilization
         util = jnp.divide(jnp.add(s, ovr), jnp.asarray(sample.deadline))
 
@@ -369,14 +369,14 @@ def train_model(net, params, train_set, validate_set, model_config):
     step = 0
     min_loss = 1
     params_best = 0
-    state_best
+    state_best = 0
     steps_to_stop = model_config['steps_to_stop']
     while steps_to_stop > 0:
         loss_acc = 0
         for graph in train_set:
             params, opt_state = update(params, opt_state, graph)
             loss_acc += prediction_loss(params, graph)
-        loss = loss_acc/len(train_set)
+        loss = loss_acc / len(train_set)
         print("step: %d, loss: %f, mode: train" % (step, loss))
         loss = prediction_loss(params, validate_set)
         print("step: %d, loss: %f, mode: validate" % (step, loss))
@@ -394,7 +394,7 @@ def train_model(net, params, train_set, validate_set, model_config):
             print("not improved, steps left: ", steps_to_stop)
 
     write_csv()
-    save_model(state_best)
+    # save_model(state_best)
 
     return params_best
 
@@ -452,4 +452,5 @@ def predict_model(net, params, sample, model_config):
 
     loss = jnp.divide(jnp.sum(losses), model_config['batch_size'])
 
-    return loss, jnp.divide(jnp.sum(util), model_config['batch_size']), jnp.divide(jnp.sum(p_full), model_config['batch_size'])
+    return loss, jnp.divide(jnp.sum(util), model_config['batch_size']), jnp.divide(jnp.sum(p_full),
+                                                                                   model_config['batch_size'])
