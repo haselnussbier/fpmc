@@ -59,6 +59,8 @@ def save_config(config: dict):
         yaml.dump(config, f)
 
 
-# def save_model(state):
+def save_model(state):
     # trained_params = jax.experimental.optimizers.unpack_optimizer_state(state)
     # pickle.dump(trained_params, open("results/" + TIMESTAMP + "/params.pkl", "wb"))
+    return
+
