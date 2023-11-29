@@ -2,11 +2,21 @@ import csv
 from datetime import datetime
 import pandas as pd
 import matplotlib
+import yaml
+import jax
 from matplotlib import pyplot as plt
 import os
+import pickle
 matplotlib.use("Agg")
 DATA = list()
 TIMESTAMP: str
+
+def init_result():
+    now = datetime.now()
+    timestamp = '{:%d.%m-%H:%M}'.format(now)
+    global TIMESTAMP
+    TIMESTAMP = timestamp
+    os.mkdir("results/" + TIMESTAMP)
 
 
 def append_data(data):
@@ -17,11 +27,7 @@ def append_data(data):
 
 
 def write_csv():
-    now = datetime.now()
-    timestamp = '{:%d.%m-%H:%M}'.format(now)
     global TIMESTAMP
-    TIMESTAMP = timestamp
-    os.mkdir("results/" + TIMESTAMP)
     with open("results/" + TIMESTAMP + "/training.csv", "w", newline='') as f:
         writer = csv.writer(f)
         global DATA
@@ -43,5 +49,17 @@ def plot():
     fig.savefig("results/" + TIMESTAMP + "/plot.png")
     #plot_loss = p9.ggplot(train) + p9.aes('step', ['loss', 'util', 'p']) + p9.geom_line()
     #plot_loss.save(filename="plot-"+TIMESTAMP+".pdf", path="model/results/")
+
+
+def save_config(config: dict):
+    global TIMESTAMP
+    with open("results/" + TIMESTAMP + "/config.yaml", "w") as f:
+        yaml.dump(config, f)
+
+
+def save_model(state):
+    trained_params = jax.experimental.optimizers.unpack_optimizer_state(state)
+    pickle.dump(trained_params, open("results/" + TIMESTAMP + "/params.pkl", "wb"))
+
 
 

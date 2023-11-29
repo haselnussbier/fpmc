@@ -5,10 +5,9 @@ from typing import *
 import jax.numpy as jnp
 import numpy as np
 import xmltodict
+import jax
 
 from model import Graph, Step
-
-
 
 
 def build_levels(ports: Dict):
@@ -95,7 +94,7 @@ def generate_sets(nTasks: int, nDags: int, nCores: int, pEdge: float, set_size: 
         if len(order) != nTasks:
             print("Graph contains unreachable nodes")
             continue
-        node_features = np.zeros(shape=(len(dict_graph['mcsystem']['mcdag']['actor']), 4))
+        node_features = np.zeros(shape=(len(dict_graph['mcsystem']['mcdag']['actor'])+1, 5))
 
         for actor in dict_graph['mcsystem']['mcdag']['actor']:
 
@@ -105,43 +104,35 @@ def generate_sets(nTasks: int, nDags: int, nCores: int, pEdge: float, set_size: 
             # acet
             # Standard deviation
             if actor['wcet'][1]['#text'] == '0':
-                node_features[order.index(actor['@name'])] = jnp.asarray([[0,
-                                                                           int(actor['wcet'][0]['#text']),
-                                                                           int(float(actor['wcet'][0][
-                                                                                         '#text']) * random.uniform(0.2,
-                                                                                                                    1 / 3)),
-                                                                           int(float(actor['wcet'][0][
-                                                                                         '#text']) * random.uniform(0.1,
-                                                                                                                    0.2))]],
-                                                                         dtype=jnp.float32)
+                node_features[order.index(actor['@name'])] = jnp.asarray([[0, int(actor['wcet'][0]['#text']), 0, 0, 0]], dtype=jnp.float32)
+
+
             else:
                 node_features[order.index(actor['@name'])] = jnp.asarray([[1,
+                                                                           int(actor['wcet'][0]['#text']),
                                                                            int(actor['wcet'][1]['#text']),
-                                                                           int(float(actor['wcet'][1][
-                                                                                         '#text']) * random.uniform(0.2,
-                                                                                                                    1 / 3)),
-                                                                           int(float(actor['wcet'][1][
-                                                                                         '#text']) * random.uniform(0.1,
-                                                                                                                    0.2))]],
+                                                                           float(actor['wcet'][1]['#text']) * random.uniform(0.2, 1/3),
+                                                                           float(actor['wcet'][1]['#text']) * random.uniform(0.1, 0.2)]],
                                                                          dtype=jnp.float32)
+        # create dummy node for padding
+        node_features[-1] = jnp.asarray([[0, 0, 0, 0, 0]], dtype=jnp.float32)
+
         steps = list()
         for node in order:
             for edge in dict_graph['mcsystem']['mcdag']['ports']['port']:
                 if edge['@srcActor'] == node:
                     steps.append(Step(sender=jnp.asarray([order.index(node)], dtype=jnp.int32),
                                       receiver=jnp.asarray([order.index(edge['@dstActor'])], dtype=jnp.int32)))
-
+        """
         core_schedules = list()
         for i in range(nCores):
             core_schedules.append(dict_sched['sched']['Mode-0']['core'][i]['slot'])
-
-        leftover = calc_leftover(core_schedules)
+        """
 
         graph = Graph(node_features=jnp.asarray(node_features),
                       node_values=None,
                       steps=steps,
-                      deadline=[int(dict_graph['mcsystem']['mcdag']['@deadline']) * nCores],
-                      leftover_time=[leftover])
+                      deadline=[int(dict_graph['mcsystem']['mcdag']['@deadline']) * nCores])
 
         graphs += [graph]
 
@@ -158,12 +149,11 @@ def pad_steps(graphs: list):
             max_steps = len(graph.steps)
     for graph in graphs:
         while len(graph.steps) < max_steps:
-            graph.steps.append(Step(jnp.asarray([], dtype=jnp.int32), jnp.asarray([], dtype=jnp.int32)))
+            graph.steps.append(Step(jnp.asarray([len(graph.node_features)-1], dtype=jnp.int32), jnp.asarray([len(graph.node_features)-1], dtype=jnp.int32)))
     return graphs, max_steps
 
 
 def batch(graphs: list, batch_size: int):
-
     batched_graphs = list()
     for batch in range(0, len(graphs), batch_size):
         next_batch = graphs[batch: batch + batch_size]
@@ -173,34 +163,32 @@ def batch(graphs: list, batch_size: int):
         node_features = list()
         col_steps = list()
         deadlines = list()
-        l_times = list()
         tasks = 0
         for graph in next_batch:
             tasks = len(graph.node_features)
             node_features.append(graph.node_features)
             col_steps.append(graph.steps)
             deadlines.append(graph.deadline)
-            l_times.append(graph.leftover_time)
         conc_nf = np.concatenate(node_features)
         conc_steps = list()
         for i in range(max_steps):
             senders = list()
             receivers = list()
             for j in range(len(col_steps)):
-                offset = j*tasks
-                senders.append(col_steps[j][i].sender+offset)
-                receivers.append(col_steps[j][i].receiver+offset)
+                offset = j * tasks
+                senders.append(col_steps[j][i].sender + offset)
+                receivers.append(col_steps[j][i].receiver + offset)
             conc_senders = np.concatenate(senders)
             conc_receivers = np.concatenate(receivers)
             step = Step(sender=conc_senders, receiver=conc_receivers)
             conc_steps.append(step)
 
+        conc_steps = jax.tree_map(lambda x: np.expand_dims(x, 1), conc_steps)
+        conc_steps = jax.tree_multimap(lambda *args: np.concatenate(args, 1).transpose(), *conc_steps)
+
         graph = Graph(node_features=conc_nf,
                       node_values=None,
                       steps=conc_steps,
-                      deadline=deadlines,
-                      leftover_time=l_times)
+                      deadline=deadlines)
         batched_graphs.append(graph)
     return batched_graphs
-
-

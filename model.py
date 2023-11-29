@@ -4,7 +4,7 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 import optax
-from plot import append_data, write_csv
+from plot import append_data, write_csv, save_model
 
 NodeValue = jnp.ndarray
 NodeFeatures = jnp.ndarray
@@ -22,8 +22,7 @@ class Graph(NamedTuple):
     steps: AnyNested
 
     # additional information not included in calculations
-    deadline: list
-    leftover_time: list
+    deadline: AnyNested
 
 
 class Step(NamedTuple):
@@ -41,7 +40,7 @@ def Init(i_fn: IFn):
             new_wcets.append(new_wcet)
         """
         new_wcets = jax.tree_map(lambda x: i_fn(x), node_features)
-        return graph._replace(node_values=jnp.asarray(new_wcets, dtype=jnp.float64))
+        return graph._replace(node_values=jnp.asarray(new_wcets, dtype=jnp.float32))
 
     return _Init
 
@@ -192,7 +191,7 @@ class Model(ModelBase):
         return jax.tree_map(lambda x: self.r(x), cv)
 
     def get_net_definition(self):
-        def _get_net_definition(graph: Graph, debug_mode=True):
+        def _get_net_definition(graph: Graph, debug_mode=False):
             init = Init(i_fn=self.i_fn)
             graph = init(graph)
 
@@ -211,7 +210,8 @@ class Model(ModelBase):
                     step = graph.steps[i]  # jax.tree_map(lambda x: x[i], graph.steps)
                     graph, _ = f_scan(graph, step)
             else:
-                graph, extra = hk.scan(f_scan, graph, graph.steps)
+                steps = graph.steps
+                graph, extra = hk.scan(f_scan, graph, steps)
 
             output = Output(r_fn=self.r_fn)
             graph = output(graph)
@@ -226,6 +226,7 @@ def init_net(model_config, sample):
     net = Model(model_config)
     net_def = net.get_net_definition()
     net = hk.without_apply_rng(hk.transform(net_def))
+    """
     params = 0
     test = False
     if test:
@@ -239,12 +240,15 @@ def init_net(model_config, sample):
             print(wcets_lo)
     else:
         params = net.init(jax.random.PRNGKey(69), sample)
+        
+    """
+    params = net.init(jax.random.PRNGKey(69), sample)
     return net, params
 
 
-def train_model(net, params, train_set, validate_set, num_steps, learning_rate, batch_size):
+def train_model(net, params, train_set, validate_set, model_config):
 
-    # @jax.jit
+    @jax.jit
     def get_metrics(params, sample):
         # model returns values (ret) between -1 and 1
         # these values represent how the wcet_hi should change, wcet_lo = wcet_hi * wcet_p
@@ -253,50 +257,52 @@ def train_model(net, params, train_set, validate_set, num_steps, learning_rate, 
         output = net.apply(params, sample)
         wcets_p = jnp.subtract(1, output)
 
-        # get given high-wcets of each task from graph
-        wcets_hi = jnp.expand_dims(sample.node_features[:, 1], axis=1)
-        # calculate new low-wcets for each task based on model returns
-        wcets_lo = jnp.multiply(wcets_p, wcets_hi)
-        # get given acet of each task from graph
-        acets = jnp.expand_dims(sample.node_features[:, 2], axis=1)
-        # get given standard deviation of each task from graph
-        st_ds = jnp.expand_dims(sample.node_features[:, 3], axis=1)
+        # get node features
+        crit = jnp.expand_dims(sample.node_features[:, 0], axis=1)
+        wcets_lo = jnp.expand_dims(sample.node_features[:, 1], axis=1)
+        wcets_hi = jnp.expand_dims(sample.node_features[:, 2], axis=1)
+        acets = jnp.expand_dims(sample.node_features[:, 3], axis=1)
+        st_ds = jnp.expand_dims(sample.node_features[:, 4], axis=1)
+
+        # calculate new wcets_lo
+        wcets_lo_new = jnp.multiply(wcets_p, wcets_hi)
 
         # split into respective graphs (unbatch)
-        wcets_lo = jnp.asarray(jnp.split(wcets_lo, batch_size))
-        acets = jnp.asarray(jnp.split(acets, batch_size))
-        st_ds = jnp.asarray(jnp.split(st_ds, batch_size))
+        crit = jnp.asarray(jnp.split(crit, model_config['batch_size']))
+        wcets_lo = jnp.asarray(jnp.split(wcets_lo, model_config['batch_size']))
+        wcets_hi = jnp.asarray(jnp.split(wcets_hi, model_config['batch_size']))
+        acets = jnp.asarray(jnp.split(acets, model_config['batch_size']))
+        st_ds = jnp.asarray(jnp.split(st_ds, model_config['batch_size']))
 
-        # ----------------------------
+        wcets_lo_new = jnp.asarray(jnp.split(wcets_lo_new, model_config['batch_size']))
+
         # Calculate Utilization:
 
-        wcets_sum = jnp.sum(wcets_lo, axis=1)
-        used_timeslots_old = jnp.subtract(jnp.multiply(jnp.asarray(sample.deadline), 2),
-                                          jnp.asarray(sample.leftover_time))
-        s = jnp.subtract(used_timeslots_old, wcets_sum)
+        # calculate difference between old and new wcets_lo_hc
+        wcets_lo_hc_old = jnp.where(crit == 1, wcets_lo, 0)
+        wcets_lo_hc_new = jnp.where(crit == 1, wcets_lo_new, 0)
+        s = jnp.subtract(jnp.sum(wcets_lo_hc_old, axis=1), jnp.sum(wcets_lo_hc_new, axis=1))
 
-        # get criticality of nodes
-        crit = jnp.expand_dims(sample.node_features[:, 0], axis=1)
-        crit = jnp.asarray(jnp.split(crit, batch_size))
+        # calculate overall utilization
 
-        # get low criticality wcets
-        wcets_lc = jnp.where(crit == 0, wcets_lo, 0)
-        wcets_lc = jnp.sum(wcets_lc, axis=1)
+        ovr = jnp.subtract(jnp.asarray(sample.deadline), jnp.sum(wcets_lo_new, axis=1))
 
-        ovr = jnp.asarray(jnp.add(jnp.asarray(s), jnp.asarray(wcets_lc)))
-        util = jnp.divide(ovr, jnp.asarray(sample.deadline))
-
-        # util = jnp.divide(jnp.subtract(jnp.asarray(sample.leftover_time), leftover), jnp.asarray(sample.leftover_time))
+        # utilization
+        util = jnp.divide(jnp.add(s, ovr), jnp.asarray(sample.deadline))
 
         # ----------------------------
         # Calculate p_task_overrun:
 
-        n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo, acets), st_ds), dtype=jnp.int32)
+        n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo_new, acets), st_ds), dtype=jnp.int32)
         p_task = jnp.divide(1, jnp.add(1, jnp.power(n, 2)))
-        p = jnp.subtract(1, jnp.product(jnp.subtract(1, p_task), axis=1))
+        # replace probability of task overrun for lc tasks with 0, so PI(1-p_taskoverrun) only multiplies hc tasks probability
+        p_task = jnp.where(crit == 1, p_task, 0)
+        p_full = jnp.subtract(1, jnp.product(jnp.subtract(1, p_task), axis=1))
 
-        return wcets_lo, util, p
-    # @jax.jit
+        return jnp.divide(jnp.sum(util), model_config['batch_size']), jnp.divide(jnp.sum(p_full), model_config['batch_size'])
+
+
+    @jax.jit
     def prediction_loss(params, sample):
         # model returns values (ret) between -1 and 1
         # these values represent how the wcet_hi should change, wcet_lo = wcet_hi * wcet_p
@@ -305,68 +311,66 @@ def train_model(net, params, train_set, validate_set, num_steps, learning_rate, 
         output = net.apply(params, sample)
         wcets_p = jnp.subtract(1, output)
 
-        # get given high-wcets of each task from graph
-        wcets_hi = jnp.expand_dims(sample.node_features[:, 1], axis=1)
-        # calculate new low-wcets for each task based on model returns
-        wcets_lo = jnp.multiply(wcets_p, wcets_hi)
-        # get given acet of each task from graph
-        acets = jnp.expand_dims(sample.node_features[:, 2], axis=1)
-        # get given standard deviation of each task from graph
-        st_ds = jnp.expand_dims(sample.node_features[:, 3], axis=1)
+        # get node features
+        crit = jnp.expand_dims(sample.node_features[:, 0], axis=1)
+        wcets_lo = jnp.expand_dims(sample.node_features[:, 1], axis=1)
+        wcets_hi = jnp.expand_dims(sample.node_features[:, 2], axis=1)
+        acets = jnp.expand_dims(sample.node_features[:, 3], axis=1)
+        st_ds = jnp.expand_dims(sample.node_features[:, 4], axis=1)
+        
+        # calculate new wcets_lo
+        wcets_lo_new = jnp.multiply(wcets_p, wcets_hi)
 
         # split into respective graphs (unbatch)
-        wcets_lo = jnp.asarray(jnp.split(wcets_lo, batch_size))
-        acets = jnp.asarray(jnp.split(acets, batch_size))
-        st_ds = jnp.asarray(jnp.split(st_ds, batch_size))
-
-
-        # ----------------------------
+        crit = jnp.asarray(jnp.split(crit, model_config['batch_size']))
+        wcets_lo = jnp.asarray(jnp.split(wcets_lo, model_config['batch_size']))
+        wcets_hi = jnp.asarray(jnp.split(wcets_hi, model_config['batch_size']))
+        acets = jnp.asarray(jnp.split(acets, model_config['batch_size']))
+        st_ds = jnp.asarray(jnp.split(st_ds, model_config['batch_size']))
+        
+        wcets_lo_new = jnp.asarray(jnp.split(wcets_lo_new, model_config['batch_size']))
+        
         # Calculate Utilization:
+        
+        # calculate difference between old and new wcets_lo_hc
+        wcets_lo_hc_old = jnp.where(crit == 1, wcets_lo, 0)
+        wcets_lo_hc_new = jnp.where(crit == 1, wcets_lo_new, 0)
+        s = jnp.subtract(jnp.sum(wcets_lo_hc_old, axis=1), jnp.sum(wcets_lo_hc_new, axis=1))
+        
+        # calculate overall utilization
 
-        wcets_sum = jnp.sum(wcets_lo, axis=1)
-        used_timeslots_old = jnp.subtract(jnp.multiply(jnp.asarray(sample.deadline), 2), jnp.asarray(sample.leftover_time))
-        s = jnp.subtract(used_timeslots_old, wcets_sum)
-
-        # get criticality of nodes
-        crit = jnp.expand_dims(sample.node_features[:, 0], axis=1)
-        crit = jnp.asarray(jnp.split(crit, batch_size))
-
-        # get low criticality wcets
-        wcets_lc = jnp.where(crit==0, wcets_lo, 0)
-        wcets_lc = jnp.sum(wcets_lc, axis=1)
-
-        ovr = jnp.asarray(jnp.add(jnp.asarray(s), jnp.asarray(wcets_lc)))
-        util = jnp.divide(ovr, jnp.asarray(sample.deadline))
-
-
-        #util = jnp.divide(jnp.subtract(jnp.asarray(sample.leftover_time), leftover), jnp.asarray(sample.leftover_time))
+        ovr = jnp.subtract(jnp.asarray(sample.deadline), jnp.sum(wcets_lo_new, axis=1))
+        
+        # utilization
+        util = jnp.divide(jnp.add(s, ovr), jnp.asarray(sample.deadline))
 
         # ----------------------------
         # Calculate p_task_overrun:
 
-        n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo, acets), st_ds), dtype=jnp.int32)
+        n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo_new, acets), st_ds), dtype=jnp.int32)
         p_task = jnp.divide(1, jnp.add(1, jnp.power(n, 2)))
-        p = jnp.subtract(1, jnp.product(jnp.subtract(1, p_task), axis=1))
-        # p = 1 - jnp.prod(1 - jnp.asarray(p_task))
-        losses = jnp.subtract(1, jnp.multiply(util, jnp.subtract(1, p)))
+        # replace probability of task overrun for lc tasks with 0, so PI(1-p_taskoverrun) only multiplies hc tasks probability
+        p_task = jnp.where(crit == 1, p_task, 0)
+        p_full = jnp.subtract(1, jnp.product(jnp.subtract(1, p_task), axis=1))
+        losses = jnp.subtract(1, jnp.multiply(util, jnp.subtract(1, p_full)))
 
-        loss = jnp.divide(jnp.sum(losses),batch_size)
-        return loss
+        mean_loss = jnp.divide(jnp.sum(losses), model_config['batch_size'])
+        return mean_loss
 
-    opt_init, opt_update = optax.adam(learning_rate)
+    opt_init, opt_update = optax.adam(float(model_config['learning_rate']))
     opt_state = opt_init(params)
 
-    # @jax.jit
-    def update(params, opt_state, sample):
+    @jax.jit
+    def update(params, state, sample):
         g = jax.grad(prediction_loss)(params, sample)
-        updates, opt_state = opt_update(g, opt_state, params)
-        a = optax.apply_updates(params, updates)
-        return a, opt_state
+        updates, state = opt_update(g, state, params)
+        return optax.apply_updates(params, updates), state
 
     step = 0
     min_loss = 1
     params_best = 0
-    steps_to_stop = num_steps
+    state_best
+    steps_to_stop = model_config['steps_to_stop']
     while steps_to_stop > 0:
         loss_acc = 0
         for graph in train_set:
@@ -376,12 +380,13 @@ def train_model(net, params, train_set, validate_set, num_steps, learning_rate, 
         print("step: %d, loss: %f, mode: train" % (step, loss))
         loss = prediction_loss(params, validate_set)
         print("step: %d, loss: %f, mode: validate" % (step, loss))
-        _, util, p = get_metrics(params, validate_set)
+        util, p = get_metrics(params, validate_set)
         append_data([step, loss, util, p])
         step += 1
         if loss < min_loss:
-            steps_to_stop = num_steps
+            steps_to_stop = model_config['steps_to_stop']
             params_best = params
+            state_best = opt_state
             min_loss = loss
             print("improved")
         else:
@@ -389,35 +394,62 @@ def train_model(net, params, train_set, validate_set, num_steps, learning_rate, 
             print("not improved, steps left: ", steps_to_stop)
 
     write_csv()
+    save_model(state_best)
+
     return params_best
 
 
-def predict_model(net, params, sample, batch_size):
+def predict_model(net, params, sample, model_config):
+    # model returns values (ret) between -1 and 1
+    # these values represent how the wcet_hi should change, wcet_lo = wcet_hi * wcet_p
+    # return value < 1 -> wcet_p > 1 -> wcet_low increases by percentage abs(ret)
+    # return value > 1 -> wcet_p < 1 -> wcet_low decreases by percentage ret
     output = net.apply(params, sample)
     wcets_p = jnp.subtract(1, output)
-    wcets_hi = jnp.expand_dims(sample.node_features[:, 1], axis=1)
-    wcets_lo = jnp.multiply(wcets_p, wcets_hi)
-    acets = jnp.expand_dims(sample.node_features[:, 2], axis=1)
-    st_ds = jnp.expand_dims(sample.node_features[:, 3], axis=1)
-    wcets_lo = jnp.asarray(jnp.split(wcets_lo, batch_size))
-    acets = jnp.asarray(jnp.split(acets, batch_size))
-    st_ds = jnp.asarray(jnp.split(st_ds, batch_size))
-    wcets_sum = jnp.sum(wcets_lo, axis=1)
-    used_timeslots_old = jnp.subtract(jnp.multiply(jnp.asarray(sample.deadline), 2), jnp.asarray(sample.leftover_time))
-    s = jnp.subtract(used_timeslots_old, wcets_sum)
+
+    # get node features
     crit = jnp.expand_dims(sample.node_features[:, 0], axis=1)
-    crit = jnp.asarray(jnp.split(crit, batch_size))
-    wcets_lc = jnp.where(crit == 0, wcets_lo, 0)
-    wcets_lc = jnp.sum(wcets_lc, axis=1)
-    ovr = jnp.asarray(jnp.add(jnp.asarray(s), jnp.asarray(wcets_lc)))
-    util = jnp.divide(ovr, jnp.asarray(sample.deadline))
-    n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo, acets), st_ds), dtype=jnp.int32)
+    wcets_lo = jnp.expand_dims(sample.node_features[:, 1], axis=1)
+    wcets_hi = jnp.expand_dims(sample.node_features[:, 2], axis=1)
+    acets = jnp.expand_dims(sample.node_features[:, 3], axis=1)
+    st_ds = jnp.expand_dims(sample.node_features[:, 4], axis=1)
+
+    # calculate new wcets_lo
+    wcets_lo_new = jnp.multiply(wcets_p, wcets_hi)
+
+    # split into respective graphs (unbatch)
+    crit = jnp.asarray(jnp.split(crit, model_config['batch_size']))
+    wcets_lo = jnp.asarray(jnp.split(wcets_lo, model_config['batch_size']))
+    wcets_hi = jnp.asarray(jnp.split(wcets_hi, model_config['batch_size']))
+    acets = jnp.asarray(jnp.split(acets, model_config['batch_size']))
+    st_ds = jnp.asarray(jnp.split(st_ds, model_config['batch_size']))
+
+    wcets_lo_new = jnp.asarray(jnp.split(wcets_lo_new, model_config['batch_size']))
+
+    # Calculate Utilization:
+
+    # calculate difference between old and new wcets_lo_hc
+    wcets_lo_hc_old = jnp.where(crit == 1, wcets_lo, 0)
+    wcets_lo_hc_new = jnp.where(crit == 1, wcets_lo_new, 0)
+    s = jnp.subtract(jnp.sum(wcets_lo_hc_old, axis=1), jnp.sum(wcets_lo_hc_new, axis=1))
+
+    # calculate overall utilization
+
+    ovr = jnp.subtract(jnp.asarray(sample.deadline), jnp.sum(wcets_lo_new, axis=1))
+
+    # utilization
+    util = jnp.divide(jnp.add(s, ovr), jnp.asarray(sample.deadline))
+
+    # ----------------------------
+    # Calculate p_task_overrun:
+
+    n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo_new, acets), st_ds), dtype=jnp.int32)
     p_task = jnp.divide(1, jnp.add(1, jnp.power(n, 2)))
-    p = jnp.subtract(1, jnp.product(jnp.subtract(1, p_task), axis=1))
-    losses = jnp.subtract(1, jnp.multiply(util, jnp.subtract(1, p)))
+    # replace probability of task overrun for lc tasks with 0, so PI(1-p_taskoverrun) only multiplies hc tasks probability
+    p_task = jnp.where(crit == 1, p_task, 0)
+    p_full = jnp.subtract(1, jnp.product(jnp.subtract(1, p_task), axis=1))
+    losses = jnp.subtract(1, jnp.multiply(util, jnp.subtract(1, p_full)))
 
-    util = jnp.divide(jnp.sum(util), batch_size)
-    p = jnp.divide(jnp.sum(p), batch_size)
-    loss = jnp.divide(jnp.sum(losses), batch_size)
+    loss = jnp.divide(jnp.sum(losses), model_config['batch_size'])
 
-    return loss, util, p
+    return loss, jnp.divide(jnp.sum(util), model_config['batch_size']), jnp.divide(jnp.sum(p_full), model_config['batch_size'])

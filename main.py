@@ -4,7 +4,7 @@ import yaml
 
 from generator import *
 from model import *
-from plot import plot
+from plot import plot, save_config, init_result, save_model
 import optparse
 
 with open("config.yml", "r") as file:
@@ -121,6 +121,7 @@ if not (options.batch_size is None):
 if not (options.jobs is None):
     config['jobs'] = options.jobs
 
+init_result()
 
 train_set, validate_set = generate_sets(nTasks=config['graphs']['tasks'],
                                         nDags=config['graphs']['dags'],
@@ -134,28 +135,30 @@ model_config = ModelConfig(
     num_hidden_neurons=config['model']['neurons'],
     num_hidden_layers=config['model']['layers']
 )
-sample = train_set[0]
-
-net, params = init_net(model_config=model_config, sample=sample)
-
 batched_train = batch(train_set, config['model']['batch_size'])
 batched_val = batch(validate_set, config['model']['batch_size'])
 test = batched_train.pop()
+sample = batched_train[0]
+
+net, params = init_net(model_config=model_config, sample=sample)
+
+
 
 trained_params = train_model(net=net,
                              params=params,
                              train_set=batched_train,
                              validate_set=batched_val[0],
-                             num_steps=config['model']['steps_to_stop'],
-                             learning_rate=float(config['model']['learning_rate']),
-                             batch_size=config['model']['batch_size'])
+                             model_config=config['model'])
 
 plot()
 
-loss, utilization, p_task_overrun = predict_model(net, trained_params, test, config['model']['batch_size'])
+loss, utilization, p_task_overrun = predict_model(net, trained_params, test, config['model'])
 
 print("*****************************************")
 print("Test-Batch finished with a loss of  ", loss)
 print("An average utilization of ", utilization, " per Graph.")
 print("And a probability of task overrun of ", p_task_overrun, " per Graph.")
 print("*****************************************")
+
+save_config(config)
+
