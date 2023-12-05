@@ -125,8 +125,8 @@ if not (options.batch_size is None):
 if not (options.jobs is None):
     config['jobs'] = options.jobs
 
-# if options.single:
-if 1:
+if options.single:
+# if 1:
     config['training_set'] = 5
     config['model']['batch_size'] = 1
 
