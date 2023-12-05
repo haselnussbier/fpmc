@@ -15,5 +15,3 @@ graphs:
 training_set: 30
 
 jobs: 10
-
-single: True

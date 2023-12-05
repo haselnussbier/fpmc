@@ -81,6 +81,11 @@ parser.add_option("-j",
                   type="int",
                   help="Set Amount of Threads for Graph generation")
 
+parser.add_option("-u",
+                  action="store_true",
+                  dest="single",
+                  help="Perform Model on a single graph")
+
 (options, args) = parser.parse_args()
 
 if options.help:
@@ -97,13 +102,13 @@ if not (options.hidden_size is None):
     config['model']['hidden_size'] = options.hidden_size
 
 if not (options.core is None):
-    config['graph']['cores'] = options.core
+    config['graphs']['cores'] = options.core
 
 if not (options.task is None):
-    config['graph']['tasks'] = options.task
+    config['graphs']['tasks'] = options.task
 
 if not (options.edge is None):
-    config['graph']['edge'] = options.edge
+    config['graphs']['edge'] = options.edge
 
 if not (options.training_set is None):
     config['training_set'] = options.training_set
@@ -120,41 +125,91 @@ if not (options.batch_size is None):
 if not (options.jobs is None):
     config['jobs'] = options.jobs
 
-init_result()
+# if options.single:
+if 1:
+    config['training_set'] = 5
+    config['model']['batch_size'] = 1
 
-train_set, validate_set = generate_sets(nTasks=config['graphs']['tasks'],
-                                        nDags=config['graphs']['dags'],
-                                        nCores=config['graphs']['cores'],
-                                        pEdge=config['graphs']['edge'],
-                                        set_size=config['training_set'],
-                                        nJobs=config['jobs'])
+    init_result()
 
-model_config = ModelConfig(
-    num_hidden_size=config['model']['hidden_size'],
-    num_hidden_neurons=config['model']['neurons'],
-    num_hidden_layers=config['model']['layers']
-)
-batched_train = batch(train_set, config['model']['batch_size'])
-batched_val = batch(validate_set, config['model']['batch_size'])
-test = batched_train.pop()
-sample = batched_train[0]
+    train_set, validate_set = generate_sets(nTasks=config['graphs']['tasks'],
+                                            nDags=config['graphs']['dags'],
+                                            nCores=config['graphs']['cores'],
+                                            pEdge=config['graphs']['edge'],
+                                            set_size=config['training_set'],
+                                            nJobs=config['jobs'],
+                                            split=1)
 
-net, params = init_net(model_config=model_config, sample=sample)
+    single = [train_set.pop()]
 
-trained_params = train_model(net=net,
-                             params=params,
-                             train_set=batched_train,
-                             validate_set=batched_val[0],
-                             model_config=config['model'])
+    model_config = ModelConfig(
+        num_hidden_size=config['model']['hidden_size'],
+        num_hidden_neurons=config['model']['neurons'],
+        num_hidden_layers=config['model']['layers']
+    )
 
-plot()
+    single = batch(single, config['model']['batch_size'])
 
-loss, utilization, p_task_overrun = predict_model(net, trained_params, test, config['model'])
+    net, params = init_net(model_config=model_config, sample=single[0])
 
-print("*****************************************")
-print("Test-Batch finished with a loss of  ", loss)
-print("An average utilization of ", utilization, " per Graph.")
-print("And a probability of task overrun of ", p_task_overrun, " per Graph.")
-print("*****************************************")
+    trained_params = train_model(net=net,
+                                 params=params,
+                                 train_set=single,
+                                 validate_set=single[0],
+                                 model_config=config['model'])
 
-save_config(config)
+    plot()
+
+    loss, utilization, p_task_overrun, wcets = predict_model(net, trained_params, single[0], config['model'])
+
+    print("*****************************************")
+    print("Test-Batch finished with a loss of  ", loss)
+    print("An average utilization of ", utilization, " per Graph.")
+    print("And a probability of task overrun of ", p_task_overrun, " per Graph.")
+    print("Starting wcets: ", single[0].node_features)
+    print("The best wcets are: ", wcets)
+    print("*****************************************")
+
+    save_config(config)
+
+else:
+
+    init_result()
+
+    train_set, validate_set = generate_sets(nTasks=config['graphs']['tasks'],
+                                            nDags=config['graphs']['dags'],
+                                            nCores=config['graphs']['cores'],
+                                            pEdge=config['graphs']['edge'],
+                                            set_size=config['training_set'],
+                                            nJobs=config['jobs'])
+
+    model_config = ModelConfig(
+        num_hidden_size=config['model']['hidden_size'],
+        num_hidden_neurons=config['model']['neurons'],
+        num_hidden_layers=config['model']['layers']
+    )
+    batched_train = batch(train_set, config['model']['batch_size'])
+    batched_val = batch(validate_set, config['model']['batch_size'])
+    test = batched_train.pop()
+    sample = batched_train[0]
+
+    net, params = init_net(model_config=model_config, sample=sample)
+
+    trained_params = train_model(net=net,
+                                 params=params,
+                                 train_set=batched_train,
+                                 validate_set=batched_val[0],
+                                 model_config=config['model'])
+
+    plot()
+
+    loss, utilization, p_task_overrun, wcets = predict_model(net, trained_params, test, config['model'])
+
+    print("*****************************************")
+    print("Test-Batch finished with a loss of  ", loss)
+    print("An average utilization of ", utilization, " per Graph.")
+    print("And a probability of task overrun of ", p_task_overrun, " per Graph.")
+    print("*****************************************")
+
+    save_config(config)
+

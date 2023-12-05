@@ -208,7 +208,7 @@ class Model(ModelBase):
             if debug_mode:
                 n_steps = len(graph.steps)
                 for i in range(n_steps):
-                    step = graph.steps[i]  # jax.tree_map(lambda x: x[i], graph.steps)
+                    step = jax.tree_map(lambda x: x[i], graph.steps)
                     graph, _ = f_scan(graph, step)
             else:
                 steps = graph.steps
@@ -265,16 +265,22 @@ def train_model(net, params, train_set, validate_set, model_config):
         st_ds = jnp.expand_dims(sample.node_features[:, 4], axis=1)
 
         # calculate new wcets_lo
-        wcets_lo_new = jnp.multiply(wcets_p, wcets_hi)
+        wcets_lo_new = jnp.multiply(wcets_p, wcets_lo)
 
         # split into respective graphs (unbatch)
         crit = jnp.asarray(jnp.split(crit, model_config['batch_size']))
+        crit = jnp.delete(crit, -1, axis=1)
         wcets_lo = jnp.asarray(jnp.split(wcets_lo, model_config['batch_size']))
+        wcets_lo = jnp.delete(wcets_lo, -1, axis=1)
         wcets_hi = jnp.asarray(jnp.split(wcets_hi, model_config['batch_size']))
+        wcets_hi = jnp.delete(wcets_hi, -1, axis=1)
         acets = jnp.asarray(jnp.split(acets, model_config['batch_size']))
+        acets = jnp.delete(acets, -1, axis=1)
         st_ds = jnp.asarray(jnp.split(st_ds, model_config['batch_size']))
+        st_ds = jnp.delete(st_ds, -1, axis=1)
 
         wcets_lo_new = jnp.asarray(jnp.split(wcets_lo_new, model_config['batch_size']))
+        wcets_lo_new = jnp.delete(wcets_lo_new, -1, axis=1)
 
         # Calculate Utilization:
 
@@ -319,16 +325,22 @@ def train_model(net, params, train_set, validate_set, model_config):
         st_ds = jnp.expand_dims(sample.node_features[:, 4], axis=1)
 
         # calculate new wcets_lo
-        wcets_lo_new = jnp.multiply(wcets_p, wcets_hi)
+        wcets_lo_new = jnp.multiply(wcets_p, wcets_lo)
 
         # split into respective graphs (unbatch)
         crit = jnp.asarray(jnp.split(crit, model_config['batch_size']))
+        crit = jnp.delete(crit, -1, axis=1)
         wcets_lo = jnp.asarray(jnp.split(wcets_lo, model_config['batch_size']))
+        wcets_lo = jnp.delete(wcets_lo, -1, axis=1)
         wcets_hi = jnp.asarray(jnp.split(wcets_hi, model_config['batch_size']))
+        wcets_hi = jnp.delete(wcets_hi, -1, axis=1)
         acets = jnp.asarray(jnp.split(acets, model_config['batch_size']))
+        acets = jnp.delete(acets, -1, axis=1)
         st_ds = jnp.asarray(jnp.split(st_ds, model_config['batch_size']))
+        st_ds = jnp.delete(st_ds, -1, axis=1)
 
         wcets_lo_new = jnp.asarray(jnp.split(wcets_lo_new, model_config['batch_size']))
+        wcets_lo_new = jnp.delete(wcets_lo_new, -1, axis=1)
 
         # Calculate Utilization:
 
@@ -415,16 +427,22 @@ def predict_model(net, params, sample, model_config):
     st_ds = jnp.expand_dims(sample.node_features[:, 4], axis=1)
 
     # calculate new wcets_lo
-    wcets_lo_new = jnp.multiply(wcets_p, wcets_hi)
+    wcets_lo_new = jnp.multiply(wcets_p, wcets_lo)
 
     # split into respective graphs (unbatch)
     crit = jnp.asarray(jnp.split(crit, model_config['batch_size']))
+    crit = jnp.delete(crit, -1, axis=1)
     wcets_lo = jnp.asarray(jnp.split(wcets_lo, model_config['batch_size']))
+    wcets_lo = jnp.delete(wcets_lo, -1, axis=1)
     wcets_hi = jnp.asarray(jnp.split(wcets_hi, model_config['batch_size']))
+    wcets_hi = jnp.delete(wcets_hi, -1, axis=1)
     acets = jnp.asarray(jnp.split(acets, model_config['batch_size']))
+    acets = jnp.delete(acets, -1, axis=1)
     st_ds = jnp.asarray(jnp.split(st_ds, model_config['batch_size']))
+    st_ds = jnp.delete(st_ds, -1, axis=1)
 
     wcets_lo_new = jnp.asarray(jnp.split(wcets_lo_new, model_config['batch_size']))
+    wcets_lo_new = jnp.delete(wcets_lo_new, -1, axis=1)
 
     # Calculate Utilization:
 
@@ -453,4 +471,4 @@ def predict_model(net, params, sample, model_config):
     loss = jnp.divide(jnp.sum(losses), model_config['batch_size'])
 
     return loss, jnp.divide(jnp.sum(util), model_config['batch_size']), jnp.divide(jnp.sum(p_full),
-                                                                                   model_config['batch_size'])
+                                                                                   model_config['batch_size']), wcets_lo_new
