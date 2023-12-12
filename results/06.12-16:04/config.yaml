@@ -1,0 +1,14 @@
+graphs:
+  cores: 2
+  dags: 1
+  edge: 15
+  tasks: 30
+jobs: 100
+model:
+  batch_size: 10
+  hidden_size: 64
+  layers: 16
+  learning_rate: 0.0002
+  neurons: 64
+  steps_to_stop: 20
+training_set: 200
