@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<mcsystem>
+    <mcdag deadline="365" name="genned-0-ed-9.0-0">
+        <actor name="D0N16">
+            <wcet number="0">20</wcet>
+            <wcet number="1">0</wcet>
+            <rank>2</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N12">
+            <wcet number="0">6</wcet>
+            <wcet number="1">0</wcet>
+            <rank>2</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N17">
+            <wcet number="0">26</wcet>
+            <wcet number="1">0</wcet>
+            <rank>3</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N7">
+            <wcet number="0">29</wcet>
+            <wcet number="1">0</wcet>
+            <rank>1</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N15">
+            <wcet number="0">13</wcet>
+            <wcet number="1">0</wcet>
+            <rank>2</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N1">
+            <wcet number="0">150</wcet>
+            <wcet number="1">241</wcet>
+            <rank>1</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N14">
+            <wcet number="0">1</wcet>
+            <wcet number="1">0</wcet>
+            <rank>2</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N5">
+            <wcet number="0">30</wcet>
+            <wcet number="1">0</wcet>
+            <rank>0</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N8">
+            <wcet number="0">57</wcet>
+            <wcet number="1">0</wcet>
+            <rank>1</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N13">
+            <wcet number="0">22</wcet>
+            <wcet number="1">0</wcet>
+            <rank>2</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N9">
+            <wcet number="0">16</wcet>
+            <wcet number="1">0</wcet>
+            <rank>1</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N18">
+            <wcet number="0">10</wcet>
+            <wcet number="1">0</wcet>
+            <rank>3</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N0">
+            <wcet number="0">48</wcet>
+            <wcet number="1">117</wcet>
+            <rank>0</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N2">
+            <wcet number="0">43</wcet>
+            <wcet number="1">180</wcet>
+            <rank>0</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N11">
+            <wcet number="0">35</wcet>
+            <wcet number="1">0</wcet>
+            <rank>1</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N6">
+            <wcet number="0">1</wcet>
+            <wcet number="1">0</wcet>
+            <rank>0</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N10">
+            <wcet number="0">3</wcet>
+            <wcet number="1">0</wcet>
+            <rank>1</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N3">
+            <wcet number="0">113</wcet>
+            <wcet number="1">119</wcet>
+            <rank>0</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N4">
+            <wcet number="0">3</wcet>
+            <wcet number="1">0</wcet>
+            <rank>0</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <actor name="D0N19">
+            <wcet number="0">31</wcet>
+            <wcet number="1">0</wcet>
+            <rank>3</rank>
+            <fprob>0.0</fprob>
+        </actor>
+        <ports>
+            <port dstActor="D0N19" name="p0" srcActor="D0N16"/>
+            <port dstActor="D0N19" name="p1" srcActor="D0N12"/>
+            <port dstActor="D0N17" name="p2" srcActor="D0N7"/>
+            <port dstActor="D0N19" name="p3" srcActor="D0N15"/>
+            <port dstActor="D0N18" name="p4" srcActor="D0N14"/>
+            <port dstActor="D0N17" name="p5" srcActor="D0N5"/>
+            <port dstActor="D0N9" name="p6" srcActor="D0N5"/>
+            <port dstActor="D0N8" name="p7" srcActor="D0N5"/>
+            <port dstActor="D0N18" name="p8" srcActor="D0N13"/>
+            <port dstActor="D0N11" name="p9" srcActor="D0N0"/>
+            <port dstActor="D0N1" name="p10" srcActor="D0N0"/>
+            <port dstActor="D0N15" name="p11" srcActor="D0N0"/>
+            <port dstActor="D0N11" name="p12" srcActor="D0N2"/>
+            <port dstActor="D0N7" name="p13" srcActor="D0N6"/>
+            <port dstActor="D0N10" name="p14" srcActor="D0N6"/>
+            <port dstActor="D0N16" name="p15" srcActor="D0N6"/>
+            <port dstActor="D0N7" name="p16" srcActor="D0N3"/>
+            <port dstActor="D0N15" name="p17" srcActor="D0N3"/>
+            <port dstActor="D0N8" name="p18" srcActor="D0N4"/>
+            <port dstActor="D0N18" name="p19" srcActor="D0N4"/>
+            <port dstActor="D0N16" name="p20" srcActor="D0N4"/>
+        </ports>
+    </mcdag>
+    <cores number="2"/>
+    <levels number="2"/>
+    <schedule name="edf"/>
+</mcsystem>

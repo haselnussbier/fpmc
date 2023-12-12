@@ -61,6 +61,7 @@ def calc_leftover(schedules):
 
 
 def generate_sets(nTasks: int, nDags: int, nCores: int, pEdge: float, set_size: int, nLevels=2, nJobs=1, split=0.8):
+    print("uwu", os.path.exists("mcdag/generator.jar"))
     cmd = "java -jar mcdag/generator.jar " \
           "-mu " + str(nCores - 0.9) + \
           " -nd " + str(nDags) + \
@@ -79,17 +80,21 @@ def generate_sets(nTasks: int, nDags: int, nCores: int, pEdge: float, set_size: 
     graphs = list()
 
     for i in range(set_size):
+        """
         cmd = "java -jar mcdag/scheduler.jar -i graphs/graph-c" + str(nCores) + "-t" + str(nTasks) + "-e" + str(
             pEdge) + "-" + str(i) + ".xml -j 1 -os"
         ret = os.system(cmd)
         if ret != 0:
             print("Graph not schedulable, skipping")
             continue
+        """
         dict_graph = xmltodict.parse(open(
             "graphs/graph-c" + str(nCores) + "-t" + str(nTasks) + "-e" + str(pEdge) + "-" + str(i) + ".xml").read())
+        """
         dict_sched = xmltodict.parse(open(
             "graphs/graph-c" + str(nCores) + "-t" + str(nTasks) + "-e" + str(pEdge) + "-" + str(
                 i) + "-sched.xml").read())
+        """
         order = build_levels(dict_graph['mcsystem']['mcdag']['ports']['port'])
         if len(order) != nTasks:
             print("Graph contains unreachable nodes")

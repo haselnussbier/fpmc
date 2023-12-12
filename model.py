@@ -5,7 +5,7 @@ import jax
 import jax.numpy as jnp
 import optax
 
-from plot import append_data, write_csv, save_model
+from plot import append_data, write_csv
 
 NodeValue = jnp.ndarray
 NodeFeatures = jnp.ndarray
