@@ -1,11 +1,12 @@
+import random
 from typing import *
-
+import numpy as np
 import haiku as hk
 import jax
 import jax.numpy as jnp
 import optax
 
-from plot import append_data, write_csv
+from plot import *
 
 NodeValue = jnp.ndarray
 NodeFeatures = jnp.ndarray
@@ -29,6 +30,59 @@ class Graph(NamedTuple):
 class Step(NamedTuple):
     sender: jnp.ndarray
     receiver: jnp.ndarray
+
+
+def pad_steps(graphs: list):
+    max_steps = 0
+    for graph in graphs:
+        if len(graph.steps) > max_steps:
+            max_steps = len(graph.steps)
+    for graph in graphs:
+        while len(graph.steps) < max_steps:
+            graph.steps.append(Step(jnp.asarray([len(graph.node_features) - 1], dtype=jnp.int32),
+                                    jnp.asarray([len(graph.node_features) - 1], dtype=jnp.int32)))
+    return graphs, max_steps
+
+
+def batch(graphs: list, batch_size: int):
+    batched_graphs = list()
+    for batch in range(0, len(graphs), batch_size):
+        next_batch = graphs[batch: batch + batch_size]
+        next_batch, max_steps = pad_steps(next_batch)
+        if len(next_batch) < batch_size:
+            continue
+        node_features = list()
+        col_steps = list()
+        deadlines = list()
+        tasks = 0
+        for graph in next_batch:
+            tasks = len(graph.node_features)
+            node_features.append(graph.node_features)
+            col_steps.append(graph.steps)
+            deadlines.append(graph.deadline)
+        conc_nf = np.concatenate(node_features)
+        conc_steps = list()
+        for i in range(max_steps):
+            senders = list()
+            receivers = list()
+            for j in range(len(col_steps)):
+                offset = j * tasks
+                senders.append(col_steps[j][i].sender + offset)
+                receivers.append(col_steps[j][i].receiver + offset)
+            conc_senders = np.concatenate(senders)
+            conc_receivers = np.concatenate(receivers)
+            step = Step(sender=conc_senders, receiver=conc_receivers)
+            conc_steps.append(step)
+
+        conc_steps = jax.tree_map(lambda x: np.expand_dims(x, 1), conc_steps)
+        conc_steps = jax.tree_multimap(lambda *args: np.concatenate(args, 1).transpose(), *conc_steps)
+
+        graph = Graph(node_features=conc_nf,
+                      node_values=None,
+                      steps=conc_steps,
+                      deadline=deadlines)
+        batched_graphs.append(graph)
+    return batched_graphs
 
 
 def Init(i_fn: IFn):
@@ -326,6 +380,8 @@ def train_model(net, params, train_set, validate_set, model_config):
 
         # calculate new wcets_lo
         wcets_lo_new = jnp.multiply(wcets_p, wcets_lo)
+        # experimental:
+        wcets_lo_new = jnp.where(crit == 0, wcets_lo, wcets_lo_new)
 
         # split into respective graphs (unbatch)
         crit = jnp.asarray(jnp.split(crit, model_config['batch_size']))
@@ -379,8 +435,8 @@ def train_model(net, params, train_set, validate_set, model_config):
         return optax.apply_updates(params, updates), state
 
     step = 0
-    min_loss = 1
-    params_best = 0
+    min_loss = 2
+    params_best = params
     state_best = 0
     steps_to_stop = model_config['steps_to_stop']
     while steps_to_stop > 0:
@@ -472,3 +528,121 @@ def predict_model(net, params, sample, model_config):
 
     return loss, jnp.divide(jnp.sum(util), model_config['batch_size']), jnp.divide(jnp.sum(p_full),
                                                                                    model_config['batch_size']), wcets_lo_new
+
+
+def run(config):
+    init_result()
+
+    with open(config['file'], "rb") as f:
+        graphs = pickle.load(f)
+
+    if config['file'][10] == '1':
+        train_set = batch(graphs, 1)
+        validate_set = batch(graphs, 1)
+
+    else:
+        train_set = graphs[:0.8*len(graphs)]
+        validate_set = graphs[0.8*len(graphs):]
+        train_set = batch(train_set, config['model']['batch_size'])
+        validate_set = batch(validate_set, config['model']['batch_size'])
+
+    model_config = ModelConfig(
+        num_hidden_size=config['model']['hidden_size'],
+        num_hidden_neurons=config['model']['neurons'],
+        num_hidden_layers=config['model']['layers']
+    )
+
+    net, params = init_net(model_config=model_config, sample=train_set[0])
+
+    trained_params = train_model(net=net,
+                                 params=params,
+                                 train_set=train_set,
+                                 validate_set=validate_set[0],
+                                 model_config=config['model'])
+
+    plot()
+
+    loss, utilization, p_task_overrun, wcets = predict_model(net, trained_params, validate_set[0], config['model'])
+
+    print("*****************************************")
+    print("Test-Batch finished with a loss of  ", loss)
+    print("An average utilization of ", utilization, " per Graph.")
+    print("And a probability of task overrun of ", p_task_overrun, " per Graph.")
+    print("Starting wcets: ", validate_set[0].node_features)
+    print("The best wcets are: ", wcets)
+    print("*****************************************")
+
+    save_config(config)
+
+    return utilization, p_task_overrun
+
+
+def random_factor(file: str, batch_size):
+
+    with open(file, "rb") as f:
+        graphs = pickle.load(f)
+
+    for graph in graphs:
+        wcets_hi = jnp.expand_dims(graph.node_features[:, 2], axis=1)
+        random_fac = np.random.uniform(low=2/3, high=1, size=len(wcets_hi))
+        while 1 in random_fac:
+            random_fac = random.uniform(2 / 3, 1)
+
+
+
+        # get node features
+        crit = jnp.expand_dims(graph.node_features[:, 0], axis=1)
+        wcets_lo = jnp.expand_dims(graph.node_features[:, 1], axis=1)
+        wcets_hi = jnp.expand_dims(graph.node_features[:, 2], axis=1)
+        acets = jnp.expand_dims(graph.node_features[:, 3], axis=1)
+        st_ds = jnp.expand_dims(graph.node_features[:, 4], axis=1)
+
+        # calculate new wcets_lo
+        random_fac = jnp.expand_dims(jnp.asarray(random_fac), axis=1)
+        wcets_lo_new = jnp.multiply(wcets_hi, random_fac)
+        wcets_lo_new = jnp.where(wcets_lo_new == 0, wcets_lo, wcets_lo_new)
+
+
+        crit = jnp.asarray(jnp.split(crit, batch_size))
+        wcets_lo = jnp.asarray(jnp.split(wcets_lo, batch_size))
+        wcets_hi = jnp.asarray(jnp.split(wcets_hi, batch_size))
+        acets = jnp.asarray(jnp.split(acets, batch_size))
+        st_ds = jnp.asarray(jnp.split(st_ds, batch_size))
+        wcets_lo_new = jnp.asarray(jnp.split(wcets_lo_new, batch_size))
+
+        # Calculate Utilization:
+
+        # calculate difference between old and new wcets_lo_hc
+        wcets_lo_hc_old = jnp.where(crit == 1, wcets_lo, 0)
+        wcets_lo_hc_new = jnp.where(crit == 1, wcets_lo_new, 0)
+        s = jnp.subtract(jnp.sum(wcets_lo_hc_old, axis=1), jnp.sum(wcets_lo_hc_new, axis=1))
+
+        # calculate overall utilization
+
+        ovr = jnp.subtract(jnp.asarray(graph.deadline), jnp.sum(wcets_lo_new, axis=1))
+
+        # utilization
+        util = jnp.divide(jnp.add(s, ovr), jnp.asarray(graph.deadline))
+
+        # ----------------------------
+        # Calculate p_task_overrun:
+
+        n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo_new, acets), st_ds), dtype=jnp.int32)
+        p_task = jnp.divide(1, jnp.add(1, jnp.power(n, 2)))
+        # replace probability of task overrun for lc tasks with 0, so PI(1-p_taskoverrun) only multiplies hc tasks probability
+        p_task = jnp.where(crit == 1, p_task, 0)
+        p_full = jnp.subtract(1, jnp.product(jnp.subtract(1, p_task), axis=1))
+        losses = jnp.subtract(1, jnp.multiply(util, jnp.subtract(1, p_full)))
+
+        loss = jnp.divide(jnp.sum(losses), batch_size)
+
+        print("*****************************************")
+        print("Fraction Based Method scored a loss of: ", loss)
+        print("An average utilization of ", util, " per Graph.")
+        print("And a probability of task overrun of ", p_full, " per Graph.")
+        print("Starting wcets: ", graphs[0].node_features)
+        print("The best wcets are: ", wcets_lo_new)
+        print("*****************************************")
+
+
+    return util, p_full

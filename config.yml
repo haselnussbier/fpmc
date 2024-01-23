@@ -1,17 +1,20 @@
 model:
-  neurons: 16
+  neurons: 32
   layers: 4
-  hidden_size: 16
-  steps_to_stop: 20
-  learning_rate: 1e-3
-  batch_size: 3
+  hidden_size: 32
+  steps_to_stop: 50
+  learning_rate: 0.0002
+  batch_size: 1
 
 graphs:
   tasks: 50
   dags: 1
   cores: 2
   edge: 15
+  levels: 5
 
-training_set: 30
+amount: 30
+
+file: "permanent/1graphs-c4-t30.pkl"
 
 jobs: 10

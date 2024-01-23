@@ -61,7 +61,6 @@ def calc_leftover(schedules):
 
 
 def generate_sets(nTasks: int, nDags: int, nCores: int, pEdge: float, set_size: int, nLevels=2, nJobs=1, split=0.8):
-    print("uwu", os.path.exists("mcdag/generator.jar"))
     cmd = "java -jar mcdag/generator.jar " \
           "-mu " + str(nCores - 0.9) + \
           " -nd " + str(nDags) + \

@@ -15,7 +15,7 @@ TIMESTAMP: str
 
 def init_result():
     now = datetime.now()
-    timestamp = '{:%d.%m-%H:%M}'.format(now)
+    timestamp = '{:%d.%m.%y-%H:%M:%S}'.format(now)
     global TIMESTAMP
     TIMESTAMP = timestamp
     os.mkdir("results/" + TIMESTAMP)
