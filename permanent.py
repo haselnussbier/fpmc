@@ -40,7 +40,7 @@ parser.add_option("-c",
 parser.add_option("-l",
                   dest="levels",
                   type="int",
-                  help="Set the amount of graph levels")
+                  help="Set the amount of criticality levels")
 
 parser.add_option("-t",
                   dest="tasks",
@@ -138,11 +138,10 @@ nJobs = 1
 
 g = 0
 graphs = list()
-print(config['graphs']['cores'], config['graphs']['levels'], config['graphs']['tasks'], set_size, config['graphs']['edge'])
 while g < config['amount']:
     time.sleep(2)
     cmd = "java -jar mcdag/generator.jar " \
-          "-mu " + str(config['graphs']['cores'] - 0.6) + \
+          "-mu " + str(config['graphs']['cores'] - 0.2) + \
           " -nd 1" \
           " -l " + str(config['graphs']['levels']) + \
           " -nt " + str(config['graphs']['tasks']) + \

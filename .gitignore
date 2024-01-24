@@ -7,3 +7,4 @@ graphs/*
 test.py
 batch_test.py
 permanent/graph*
+results/

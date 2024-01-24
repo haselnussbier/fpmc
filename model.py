@@ -320,6 +320,8 @@ def train_model(net, params, train_set, validate_set, model_config):
 
         # calculate new wcets_lo
         wcets_lo_new = jnp.multiply(wcets_p, wcets_lo)
+        # experimental:
+        wcets_lo_new = jnp.where(crit == 0, wcets_lo, wcets_lo_new)
 
         # split into respective graphs (unbatch)
         crit = jnp.asarray(jnp.split(crit, model_config['batch_size']))
@@ -484,6 +486,8 @@ def predict_model(net, params, sample, model_config):
 
     # calculate new wcets_lo
     wcets_lo_new = jnp.multiply(wcets_p, wcets_lo)
+    # experimental:
+    wcets_lo_new = jnp.where(crit == 0, wcets_lo, wcets_lo_new)
 
     # split into respective graphs (unbatch)
     crit = jnp.asarray(jnp.split(crit, model_config['batch_size']))
@@ -527,7 +531,7 @@ def predict_model(net, params, sample, model_config):
     loss = jnp.divide(jnp.sum(losses), model_config['batch_size'])
 
     return loss, jnp.divide(jnp.sum(util), model_config['batch_size']), jnp.divide(jnp.sum(p_full),
-                                                                                   model_config['batch_size']), wcets_lo_new
+                                                                                   model_config['batch_size']), jnp.asarray(wcets_lo_new, dtype=jnp.int32)
 
 
 def run(config):
@@ -563,23 +567,27 @@ def run(config):
     plot()
 
     loss, utilization, p_task_overrun, wcets = predict_model(net, trained_params, validate_set[0], config['model'])
-
-    print("*****************************************")
-    print("Test-Batch finished with a loss of  ", loss)
-    print("An average utilization of ", utilization, " per Graph.")
-    print("And a probability of task overrun of ", p_task_overrun, " per Graph.")
-    print("Starting wcets: ", validate_set[0].node_features)
-    print("The best wcets are: ", wcets)
-    print("*****************************************")
+    wcets_high_old = jnp.expand_dims(validate_set[0].node_features[:, 2], axis=1)
+    wcets_high_old = jnp.delete(wcets_high_old, -1, axis=0)
+    wcets = wcets[0]
+    wcets = jnp.concatenate([wcets, wcets_high_old], axis=1)
+    print("*************************************************************")
+    print("Model results.")
+    print("Utilization: " + str(round(utilization * 100, 2)) + "%.")
+    print("Probability of task overrun: " + str(round(p_task_overrun * 100, 2)) + "%.")
+    print("Combined score (u*(1-p)): ", round(utilization * (1 - p_task_overrun), 5))
+    print("Starting worstcase execution times (low, high)")
+    print(jnp.asarray(jnp.delete(validate_set[0].node_features[:, (1, 2)], -1, axis=0), dtype=jnp.int32))
+    print("The new calculated worstcase execution times are:")
+    print(jnp.asarray(wcets, dtype=jnp.int32))
+    print("*************************************************************")
 
     save_config(config)
 
-    return utilization, p_task_overrun
 
+def random_factor(config):
 
-def random_factor(file: str, batch_size):
-
-    with open(file, "rb") as f:
+    with open(config['file'], "rb") as f:
         graphs = pickle.load(f)
 
     for graph in graphs:
@@ -601,14 +609,19 @@ def random_factor(file: str, batch_size):
         random_fac = jnp.expand_dims(jnp.asarray(random_fac), axis=1)
         wcets_lo_new = jnp.multiply(wcets_hi, random_fac)
         wcets_lo_new = jnp.where(wcets_lo_new == 0, wcets_lo, wcets_lo_new)
+        crit = jnp.asarray(jnp.split(crit, config['model']['batch_size']))
+        crit = jnp.delete(crit, -1, axis=1)
+        wcets_lo = jnp.asarray(jnp.split(wcets_lo, config['model']['batch_size']))
+        wcets_lo = jnp.delete(wcets_lo, -1, axis=1)
+        wcets_hi = jnp.asarray(jnp.split(wcets_hi, config['model']['batch_size']))
+        wcets_hi = jnp.delete(wcets_hi, -1, axis=1)
+        acets = jnp.asarray(jnp.split(acets, config['model']['batch_size']))
+        acets = jnp.delete(acets, -1, axis=1)
+        st_ds = jnp.asarray(jnp.split(st_ds, config['model']['batch_size']))
+        st_ds = jnp.delete(st_ds, -1, axis=1)
 
-
-        crit = jnp.asarray(jnp.split(crit, batch_size))
-        wcets_lo = jnp.asarray(jnp.split(wcets_lo, batch_size))
-        wcets_hi = jnp.asarray(jnp.split(wcets_hi, batch_size))
-        acets = jnp.asarray(jnp.split(acets, batch_size))
-        st_ds = jnp.asarray(jnp.split(st_ds, batch_size))
-        wcets_lo_new = jnp.asarray(jnp.split(wcets_lo_new, batch_size))
+        wcets_lo_new = jnp.asarray(jnp.split(wcets_lo_new, config['model']['batch_size']))
+        wcets_lo_new = jnp.delete(wcets_lo_new, -1, axis=1)
 
         # Calculate Utilization:
 
@@ -634,15 +647,75 @@ def random_factor(file: str, batch_size):
         p_full = jnp.subtract(1, jnp.product(jnp.subtract(1, p_task), axis=1))
         losses = jnp.subtract(1, jnp.multiply(util, jnp.subtract(1, p_full)))
 
-        loss = jnp.divide(jnp.sum(losses), batch_size)
+        loss = jnp.divide(jnp.sum(losses), config['model']['batch_size'])
+        wcets_high_old = graph.node_features[:, 2]
+        wcets_high_old = jnp.delete(wcets_high_old, -1)
+        wcets_high_old = jnp.expand_dims(wcets_high_old, axis=1)
+        wcets_lo_new = wcets_lo_new[0]
+        wcets = jnp.concatenate([wcets_lo_new, wcets_high_old], axis=1)
+        print("*************************************************************")
+        print("Fraction based method results.")
+        print("Utilization: " + str(round(util[0][0] * 100, 2)) + "%.")
+        print("Probability of task overrun: " + str(round(p_full[0][0] * 100, 2)) + "%.")
+        print("Combined score (u*(1-p)): ", round(jnp.multiply(util, jnp.subtract(1, p_full))[0][0], 5))
+        print("Starting worstcase execution times (low, high)")
+        print(jnp.asarray(jnp.delete(graph.node_features[:, (1, 2)], -1, axis=0), dtype=jnp.int32))
+        print("The new calculated worstcase execution times are:")
+        print(jnp.asarray(wcets, dtype=jnp.int32))
+        print("*************************************************************")
 
-        print("*****************************************")
-        print("Fraction Based Method scored a loss of: ", loss)
-        print("An average utilization of ", util, " per Graph.")
-        print("And a probability of task overrun of ", p_full, " per Graph.")
-        print("Starting wcets: ", graphs[0].node_features)
-        print("The best wcets are: ", wcets_lo_new)
-        print("*****************************************")
 
+def base_score(config):
 
-    return util, p_full
+    with open(config['file'], "rb") as f:
+        graphs = pickle.load(f)
+
+    for graph in graphs:
+
+        # get node features
+        crit = jnp.expand_dims(graph.node_features[:, 0], axis=1)
+        crit = jnp.asarray(jnp.split(crit, config['model']['batch_size']))
+        crit = jnp.delete(crit, -1, axis=1)
+        wcets_lo = jnp.expand_dims(graph.node_features[:, 1], axis=1)
+        wcets_lo = jnp.asarray(jnp.split(wcets_lo, config['model']['batch_size']))
+        wcets_lo = jnp.delete(wcets_lo, -1, axis=1)
+        wcets_hi = jnp.expand_dims(graph.node_features[:, 2], axis=1)
+        wcets_hi = jnp.asarray(jnp.split(wcets_hi, config['model']['batch_size']))
+        wcets_hi = jnp.delete(wcets_hi, -1, axis=1)
+        acets = jnp.expand_dims(graph.node_features[:, 3], axis=1)
+        acets = jnp.asarray(jnp.split(acets, config['model']['batch_size']))
+        acets = jnp.delete(acets, -1, axis=1)
+        st_ds = jnp.expand_dims(graph.node_features[:, 4], axis=1)
+        st_ds = jnp.asarray(jnp.split(st_ds, config['model']['batch_size']))
+        st_ds = jnp.delete(st_ds, -1, axis=1)
+
+        # Calculate Utilization:
+
+        # calculate difference between old and new wcets_lo_hc
+        wcets_lo_hc_old = jnp.where(crit == 1, wcets_lo, 0)
+        wcets_lo_hc_new = jnp.where(crit == 1, wcets_lo, 0)
+        s = jnp.subtract(jnp.sum(wcets_lo_hc_old, axis=1), jnp.sum(wcets_lo_hc_new, axis=1))
+
+        # calculate overall utilization
+
+        ovr = jnp.subtract(jnp.asarray(graph.deadline), jnp.sum(wcets_lo, axis=1))
+
+        # utilization
+        util = jnp.divide(jnp.add(s, ovr), jnp.asarray(graph.deadline))
+
+        # ----------------------------
+        # Calculate p_task_overrun:
+
+        n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo, acets), st_ds), dtype=jnp.int32)
+        p_task = jnp.divide(1, jnp.add(1, jnp.power(n, 2)))
+        # replace probability of task overrun for lc tasks with 0, so PI(1-p_taskoverrun) only multiplies hc tasks probability
+        p_task = jnp.where(crit == 1, p_task, 0)
+        p_full = jnp.subtract(1, jnp.product(jnp.subtract(1, p_task), axis=1))
+
+        print("*************************************************************")
+        print("Fraction based method results.")
+        print("Utilization: " + str(round(util[0][0] * 100, 2)) + "%.")
+        print("Probability of task overrun: " + str(round(p_full[0][0] * 100, 2)) + "%.")
+        print("Combined score (u*(1-p)): ", round(jnp.multiply(util, jnp.subtract(1, p_full))[0][0], 5))
+        print("*************************************************************")
+
