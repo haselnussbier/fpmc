@@ -5,7 +5,8 @@ import yaml
 import re
 from os import listdir
 from os.path import isfile, join
-from model import run, random_factor, base_score
+from model import run
+from methods import random_factor, base_score
 
 from plot import plot, save_config, init_result
 import pickle
@@ -79,7 +80,7 @@ if options.help:
 
 if options.directory:
     regex = re.compile("[\S]*\.pkl")
-    mypath = "permanent/"
+    mypath = "graphs/"
     onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f)) and re.match(regex, f)]
     for f in onlyfiles:
         print(f)
@@ -91,7 +92,7 @@ if options.layer and options.neuron and options.hidden_size and options.steps_to
     config['model']['hidden_size'] = options.hidden_size
     config['model']['steps_to_stop'] = options.steps_to_stop
     config['model']['learning_rate'] = options.learning_rate
-    config['file'] = "permanent/" + options.file
+    config['file'] = "graphs/" + options.file
     config['model']['batch_size'] = options.batch_size
 else:
     print("Incomplete model parameters. Please use -h to get a list of necessary input.")

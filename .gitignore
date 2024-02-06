@@ -5,6 +5,6 @@ __pycache__
 .DS_Store
 graphs/*
 test.py
-batch_test.py
-permanent/graph*
+test.py
+graphs/graph*
 results/

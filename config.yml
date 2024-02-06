@@ -7,14 +7,12 @@ model:
   batch_size: 1
 
 graphs:
-  tasks: 50
+  tasks: 10
   dags: 1
   cores: 2
   edge: 15
-  levels: 5
+  levels: 2
 
-amount: 30
+amount: 5
 
-file: "permanent/1graphs-c2-t10.pkl"
-
-jobs: 10
+file: "graphs/1graphs-c2-t10.pkl"
