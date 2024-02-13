@@ -2,10 +2,12 @@ absl-py==1.4.0
 chex==0.0.4
 contourpy==1.0.7
 cycler==0.11.0
+dict2xml==1.7.4
+dicttoxml==1.7.16
 dm-haiku==0.0.4
 dm-tree==0.1.8
 flatbuffers==2.0.7
-fonttools>=4.43.0
+fonttools==4.39.3
 importlib-resources==5.12.0
 jax==0.2.13
 jaxlib==0.1.67
@@ -19,6 +21,7 @@ optax==0.0.8
 packaging==23.0
 pandas==2.1.0
 patsy==0.5.3
+Pillow==9.5.0
 plotnine==0.10.0
 pyparsing==3.0.9
 python-dateutil==2.8.2
