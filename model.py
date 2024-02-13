@@ -1,4 +1,5 @@
 import random
+import re
 from typing import *
 import numpy as np
 import haiku as hk
@@ -356,6 +357,8 @@ def train_model(net, params, train_set, validate_set, model_config):
         # Calculate p_task_overrun:
 
         n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo_new, acets), st_ds), dtype=jnp.int32)
+        # if n = 0 cause of rounding p is 1, which is wrong
+        n = jnp.where(n == 0, 1, n)
         p_task = jnp.divide(1, jnp.add(1, jnp.power(n, 2)))
         # replace probability of task overrun for lc tasks with 0, so PI(1-p_taskoverrun) only multiplies hc tasks probability
         p_task = jnp.where(crit == 1, p_task, 0)
@@ -418,6 +421,8 @@ def train_model(net, params, train_set, validate_set, model_config):
         # Calculate p_task_overrun:
 
         n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo_new, acets), st_ds), dtype=jnp.int32)
+        # if n = 0 cause of rounding p is 1, which is wrong
+        n = jnp.where(n == 0, 1, n)
         p_task = jnp.divide(1, jnp.add(1, jnp.power(n, 2)))
         # replace probability of task overrun for lc tasks with 0, so PI(1-p_taskoverrun) only multiplies hc tasks probability
         p_task = jnp.where(crit == 1, p_task, 0)
@@ -522,6 +527,8 @@ def predict_model(net, params, sample, model_config):
     # Calculate p_task_overrun:
 
     n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo_new, acets), st_ds), dtype=jnp.int32)
+    # if n = 0 cause of rounding p is 1, which is wrong
+    n = jnp.where(n == 0, 1, n)
     p_task = jnp.divide(1, jnp.add(1, jnp.power(n, 2)))
     # replace probability of task overrun for lc tasks with 0, so PI(1-p_taskoverrun) only multiplies hc tasks probability
     p_task = jnp.where(crit == 1, p_task, 0)
@@ -540,13 +547,16 @@ def run(config):
     with open(config['file'], "rb") as f:
         graphs = pickle.load(f)
 
-    if config['file'][7] == '1':
+    amount = re.search("[\d]+g", config['file']).group()
+    amount = amount[:-1]
+    amount = int(amount)
+    if amount == '1':
         train_set = batch(graphs, 1)
         validate_set = batch(graphs, 1)
 
     else:
-        train_set = graphs[:0.8*len(graphs)]
-        validate_set = graphs[0.8*len(graphs):]
+        train_set = graphs[:int(0.8*len(graphs))]
+        validate_set = graphs[int(0.8*len(graphs)):]
         train_set = batch(train_set, config['model']['batch_size'])
         validate_set = batch(validate_set, config['model']['batch_size'])
 
