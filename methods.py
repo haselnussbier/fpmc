@@ -62,23 +62,12 @@ def random_factor(config):
         # replace probability of task overrun for lc tasks with 0, so PI(1-p_taskoverrun) only multiplies hc tasks probability
         p_task = jnp.where(crit == 1, p_task, 0)
         p_full = jnp.subtract(1, jnp.product(jnp.subtract(1, p_task), axis=1))
-        losses = jnp.subtract(1, jnp.multiply(util, jnp.subtract(1, p_full)))
 
-        loss = jnp.divide(jnp.sum(losses), config['model']['batch_size'])
-        wcets_high_old = graph.node_features[:, 2]
-        wcets_high_old = jnp.delete(wcets_high_old, -1)
-        wcets_high_old = jnp.expand_dims(wcets_high_old, axis=1)
-        wcets_lo_new = wcets_lo_new[0]
-        wcets = jnp.concatenate([wcets_lo_new, wcets_high_old], axis=1)
         print("*************************************************************")
         print("Fraction based method results.")
         print("Utilization: " + str(round(util[0][0] * 100, 2)) + "%.")
         print("Probability of task overrun: " + str(round(p_full[0][0] * 100, 2)) + "%.")
         print("Combined score (u*(1-p)): ", round(jnp.multiply(util, jnp.subtract(1, p_full))[0][0], 5))
-        print("Starting worstcase execution times (low, high)")
-        print(jnp.asarray(jnp.delete(graph.node_features[:, (1, 2)], -1, axis=0), dtype=jnp.int32))
-        print("The new calculated worstcase execution times are:")
-        print(jnp.asarray(wcets, dtype=jnp.int32))
         print("*************************************************************")
 
 
@@ -130,7 +119,7 @@ def base_score(config):
         p_full = jnp.subtract(1, jnp.product(jnp.subtract(1, p_task), axis=1))
 
         print("*************************************************************")
-        print("Fraction based method results.")
+        print("Unaltered results.")
         print("Utilization: " + str(round(util[0][0] * 100, 2)) + "%.")
         print("Probability of task overrun: " + str(round(p_full[0][0] * 100, 2)) + "%.")
         print("Combined score (u*(1-p)): ", round(jnp.multiply(util, jnp.subtract(1, p_full))[0][0], 5))

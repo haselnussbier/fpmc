@@ -528,7 +528,7 @@ def predict_model(net, params, sample, model_config):
 
     n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo_new, acets), st_ds), dtype=jnp.int32)
     # if n = 0 cause of rounding p is 1, which is wrong
-    n = jnp.where(n == 0, 1, n)
+    #n = jnp.where(n == 0, 1, n)
     p_task = jnp.divide(1, jnp.add(1, jnp.power(n, 2)))
     # replace probability of task overrun for lc tasks with 0, so PI(1-p_taskoverrun) only multiplies hc tasks probability
     p_task = jnp.where(crit == 1, p_task, 0)
@@ -586,10 +586,10 @@ def run(config):
     print("Utilization: " + str(round(utilization * 100, 2)) + "%.")
     print("Probability of task overrun: " + str(round(p_task_overrun * 100, 2)) + "%.")
     print("Combined score (u*(1-p)): ", round(utilization * (1 - p_task_overrun), 5))
-    print("Starting worstcase execution times (low, high)")
-    print(jnp.asarray(jnp.delete(validate_set[0].node_features[:, (1, 2)], -1, axis=0), dtype=jnp.int32))
-    print("The new calculated worstcase execution times are:")
-    print(jnp.asarray(wcets, dtype=jnp.int32))
+    #print("Starting worstcase execution times (low, high)")
+    #print(jnp.asarray(jnp.delete(validate_set[0].node_features[:, (1, 2)], -1, axis=0), dtype=jnp.int32))
+    #print("The new calculated worstcase execution times are:")
+    #print(jnp.asarray(wcets, dtype=jnp.int32))
     print("*************************************************************")
 
     save_config(config)
