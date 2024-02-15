@@ -2,30 +2,26 @@ import pickle
 import jax.numpy as jnp
 from numpy import random
 
-def random_factor(config):
+def random_factor(validate_set, config):
 
-    with open(config['file'], "rb") as f:
-        graphs = pickle.load(f)
+    for set in validate_set:
 
-    for graph in graphs:
-        wcets_hi = jnp.expand_dims(graph.node_features[:, 2], axis=1)
-        random_fac = random.uniform(low=2/3, high=1, size=len(wcets_hi))
+        random_fac = random.uniform(low=2/3, high=1, size=jnp.shape(jnp.expand_dims(set.node_features[:, 2], axis=1)))
         while 1 in random_fac:
-            random_fac = random.uniform(2 / 3, 1)
-
-
+            random_fac = random.uniform(low=2/3, high=1, size=jnp.shape(jnp.expand_dims(set.node_features[:, 2], axis=1)))
 
         # get node features
-        crit = jnp.expand_dims(graph.node_features[:, 0], axis=1)
-        wcets_lo = jnp.expand_dims(graph.node_features[:, 1], axis=1)
-        wcets_hi = jnp.expand_dims(graph.node_features[:, 2], axis=1)
-        acets = jnp.expand_dims(graph.node_features[:, 3], axis=1)
-        st_ds = jnp.expand_dims(graph.node_features[:, 4], axis=1)
+        crit = jnp.expand_dims(set.node_features[:, 0], axis=1)
+        wcets_lo = jnp.expand_dims(set.node_features[:, 1], axis=1)
+        wcets_hi = jnp.expand_dims(set.node_features[:, 2], axis=1)
+        acets = jnp.expand_dims(set.node_features[:, 3], axis=1)
+        st_ds = jnp.expand_dims(set.node_features[:, 4], axis=1)
+
+        random_fac = jnp.expand_dims(jnp.asarray(random_fac), axis=1)
 
         # calculate new wcets_lo
-        random_fac = jnp.expand_dims(jnp.asarray(random_fac), axis=1)
         wcets_lo_new = jnp.multiply(wcets_hi, random_fac)
-        wcets_lo_new = jnp.where(wcets_lo_new == 0, wcets_lo, wcets_lo_new)
+        wcets_lo_new = jnp.where(crit == 0, wcets_lo, wcets_lo_new)
         crit = jnp.asarray(jnp.split(crit, config['model']['batch_size']))
         crit = jnp.delete(crit, -1, axis=1)
         wcets_lo = jnp.asarray(jnp.split(wcets_lo, config['model']['batch_size']))
@@ -49,10 +45,10 @@ def random_factor(config):
 
         # calculate overall utilization
 
-        ovr = jnp.subtract(jnp.asarray(graph.deadline), jnp.sum(wcets_lo_new, axis=1))
+        ovr = jnp.subtract(jnp.asarray(set.deadline), jnp.sum(wcets_lo_new, axis=1))
 
         # utilization
-        util = jnp.divide(jnp.add(s, ovr), jnp.asarray(graph.deadline))
+        util = jnp.divide(jnp.add(s, ovr), jnp.asarray(set.deadline))
 
         # ----------------------------
         # Calculate p_task_overrun:
@@ -63,35 +59,37 @@ def random_factor(config):
         p_task = jnp.where(crit == 1, p_task, 0)
         p_full = jnp.subtract(1, jnp.product(jnp.subtract(1, p_task), axis=1))
 
+        #get average
+        util = jnp.sum(util)/config['model']['batch_size']
+        p = jnp.sum(p_full) / config['model']['batch_size']
+
         print("*************************************************************")
-        print("Fraction based method results.")
-        print("Utilization: " + str(round(util[0][0] * 100, 2)) + "%.")
-        print("Probability of task overrun: " + str(round(p_full[0][0] * 100, 2)) + "%.")
-        print("Combined score (u*(1-p)): ", round(jnp.multiply(util, jnp.subtract(1, p_full))[0][0], 5))
+        print("Fraction based method results (average over validation set batches).")
+        print("Utilization: " + str(round(util * 100, 2)) + "%.")
+        print("Probability of task overrun: " + str(round(p * 100, 2)) + "%.")
+        print("Combined score (u*(1-p)): ", round(jnp.multiply(util, jnp.subtract(1, p)), 5))
         print("*************************************************************")
 
 
-def base_score(config):
+def base_score(validate_set, config):
 
-    with open(config['file'], "rb") as f:
-        graphs = pickle.load(f)
 
-    for graph in graphs:
+    for set in validate_set:
 
         # get node features
-        crit = jnp.expand_dims(graph.node_features[:, 0], axis=1)
+        crit = jnp.expand_dims(set.node_features[:, 0], axis=1)
         crit = jnp.asarray(jnp.split(crit, config['model']['batch_size']))
         crit = jnp.delete(crit, -1, axis=1)
-        wcets_lo = jnp.expand_dims(graph.node_features[:, 1], axis=1)
+        wcets_lo = jnp.expand_dims(set.node_features[:, 1], axis=1)
         wcets_lo = jnp.asarray(jnp.split(wcets_lo, config['model']['batch_size']))
         wcets_lo = jnp.delete(wcets_lo, -1, axis=1)
-        wcets_hi = jnp.expand_dims(graph.node_features[:, 2], axis=1)
+        wcets_hi = jnp.expand_dims(set.node_features[:, 2], axis=1)
         wcets_hi = jnp.asarray(jnp.split(wcets_hi, config['model']['batch_size']))
         wcets_hi = jnp.delete(wcets_hi, -1, axis=1)
-        acets = jnp.expand_dims(graph.node_features[:, 3], axis=1)
+        acets = jnp.expand_dims(set.node_features[:, 3], axis=1)
         acets = jnp.asarray(jnp.split(acets, config['model']['batch_size']))
         acets = jnp.delete(acets, -1, axis=1)
-        st_ds = jnp.expand_dims(graph.node_features[:, 4], axis=1)
+        st_ds = jnp.expand_dims(set.node_features[:, 4], axis=1)
         st_ds = jnp.asarray(jnp.split(st_ds, config['model']['batch_size']))
         st_ds = jnp.delete(st_ds, -1, axis=1)
 
@@ -104,10 +102,10 @@ def base_score(config):
 
         # calculate overall utilization
 
-        ovr = jnp.subtract(jnp.asarray(graph.deadline), jnp.sum(wcets_lo, axis=1))
+        ovr = jnp.subtract(jnp.asarray(set.deadline), jnp.sum(wcets_lo, axis=1))
 
         # utilization
-        util = jnp.divide(jnp.add(s, ovr), jnp.asarray(graph.deadline))
+        util = jnp.divide(jnp.add(s, ovr), jnp.asarray(set.deadline))
 
         # ----------------------------
         # Calculate p_task_overrun:
@@ -118,10 +116,14 @@ def base_score(config):
         p_task = jnp.where(crit == 1, p_task, 0)
         p_full = jnp.subtract(1, jnp.product(jnp.subtract(1, p_task), axis=1))
 
+        # get average
+        util = jnp.sum(util) / config['model']['batch_size']
+        p = jnp.sum(p_full) / config['model']['batch_size']
+
         print("*************************************************************")
         print("Unaltered results.")
-        print("Utilization: " + str(round(util[0][0] * 100, 2)) + "%.")
-        print("Probability of task overrun: " + str(round(p_full[0][0] * 100, 2)) + "%.")
-        print("Combined score (u*(1-p)): ", round(jnp.multiply(util, jnp.subtract(1, p_full))[0][0], 5))
+        print("Utilization: " + str(round(util * 100, 2)) + "%.")
+        print("Probability of task overrun: " + str(round(p * 100, 2)) + "%.")
+        print("Combined score (u*(1-p)): ", round(jnp.multiply(util, jnp.subtract(1, p)), 5))
         print("*************************************************************")
 

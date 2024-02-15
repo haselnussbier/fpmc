@@ -541,24 +541,8 @@ def predict_model(net, params, sample, model_config):
                                                                                    model_config['batch_size']), jnp.asarray(wcets_lo_new, dtype=jnp.int32)
 
 
-def run(config):
+def run(train_set, validate_set, config):
     init_result()
-
-    with open(config['file'], "rb") as f:
-        graphs = pickle.load(f)
-
-    amount = re.search("[\d]+g", config['file']).group()
-    amount = amount[:-1]
-    amount = int(amount)
-    if amount == '1':
-        train_set = batch(graphs, 1)
-        validate_set = batch(graphs, 1)
-
-    else:
-        train_set = graphs[:int(0.8*len(graphs))]
-        validate_set = graphs[int(0.8*len(graphs)):]
-        train_set = batch(train_set, config['model']['batch_size'])
-        validate_set = batch(validate_set, config['model']['batch_size'])
 
     model_config = ModelConfig(
         num_hidden_size=config['model']['hidden_size'],
@@ -577,10 +561,6 @@ def run(config):
     plot()
 
     loss, utilization, p_task_overrun, wcets = predict_model(net, trained_params, validate_set[0], config['model'])
-    wcets_high_old = jnp.expand_dims(validate_set[0].node_features[:, 2], axis=1)
-    wcets_high_old = jnp.delete(wcets_high_old, -1, axis=0)
-    wcets = wcets[0]
-    wcets = jnp.concatenate([wcets, wcets_high_old], axis=1)
     print("*************************************************************")
     print("Model results.")
     print("Utilization: " + str(round(utilization * 100, 2)) + "%.")
