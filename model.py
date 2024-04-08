@@ -7,7 +7,7 @@ import jax
 import jax.numpy as jnp
 import optax
 
-from plot import *
+from plot import plot, init_result, append_data, write_csv, save_score
 
 NodeValue = jnp.ndarray
 NodeFeatures = jnp.ndarray
@@ -561,16 +561,21 @@ def run(train_set, validate_set, config):
     plot()
 
     loss, utilization, p_task_overrun, wcets = predict_model(net, trained_params, validate_set[0], config['model'])
+
+    u = round(utilization * 100, 2)
+    p = round(p_task_overrun * 100, 2)
+    s = round(utilization * (1 - p_task_overrun), 5)
+
     print("*************************************************************")
     print("Model results.")
-    print("Utilization: " + str(round(utilization * 100, 2)) + "%.")
-    print("Probability of task overrun: " + str(round(p_task_overrun * 100, 2)) + "%.")
-    print("Combined score (u*(1-p)): ", round(utilization * (1 - p_task_overrun), 5))
+    print("Utilization: " + str(u) + "%.")
+    print("Probability of task overrun: " + str(p) + "%.")
+    print("Combined score (u*(1-p)): ", s)
     #print("Starting worstcase execution times (low, high)")
     #print(jnp.asarray(jnp.delete(validate_set[0].node_features[:, (1, 2)], -1, axis=0), dtype=jnp.int32))
     #print("The new calculated worstcase execution times are:")
     #print(jnp.asarray(wcets, dtype=jnp.int32))
     print("*************************************************************")
-
-    save_config(config)
+    save_score("model", u, p, s)
+    #save_config(config)
 

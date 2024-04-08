@@ -1,6 +1,7 @@
 import pickle
 import jax.numpy as jnp
 from numpy import random
+from plot import save_score
 
 def random_factor(validate_set, config):
 
@@ -63,12 +64,17 @@ def random_factor(validate_set, config):
         util = jnp.sum(util)/config['model']['batch_size']
         p = jnp.sum(p_full) / config['model']['batch_size']
 
+        u = round(util * 100, 2)
+        p = round(p * 100, 2)
+        s = round(jnp.multiply(util, jnp.subtract(1, p)), 5)
+
         print("*************************************************************")
         print("Fraction based method results (average over validation set batches).")
-        print("Utilization: " + str(round(util * 100, 2)) + "%.")
-        print("Probability of task overrun: " + str(round(p * 100, 2)) + "%.")
-        print("Combined score (u*(1-p)): ", round(jnp.multiply(util, jnp.subtract(1, p)), 5))
+        print("Utilization: " + str(u) + "%.")
+        print("Probability of task overrun: " + str(p) + "%.")
+        print("Combined score (u*(1-p)): ", s)
         print("*************************************************************")
+        save_score("random_factor", u, p, s)
 
 
 def base_score(validate_set, config):
@@ -120,10 +126,15 @@ def base_score(validate_set, config):
         util = jnp.sum(util) / config['model']['batch_size']
         p = jnp.sum(p_full) / config['model']['batch_size']
 
+        u = round(util * 100, 2)
+        p = round(p * 100, 2)
+        s = round(jnp.multiply(util, jnp.subtract(1, p)), 5)
+
         print("*************************************************************")
         print("Unaltered results.")
-        print("Utilization: " + str(round(util * 100, 2)) + "%.")
-        print("Probability of task overrun: " + str(round(p * 100, 2)) + "%.")
-        print("Combined score (u*(1-p)): ", round(jnp.multiply(util, jnp.subtract(1, p)), 5))
+        print("Utilization: " + str(u) + "%.")
+        print("Probability of task overrun: " + str(p) + "%.")
+        print("Combined score (u*(1-p)): ", s)
         print("*************************************************************")
+        save_score("base", u, p, s)
 
