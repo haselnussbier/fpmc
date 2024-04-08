@@ -96,7 +96,7 @@ if options.layer and options.neuron and options.hidden_size and options.steps_to
     config['model']['batch_size'] = options.batch_size
 else:
     print("Incomplete model parameters. Please use -h to get a list of necessary input.")
-    sys.exit()
+    #sys.exit()
 
 # batch
 with open(config['file'], "rb") as f:
@@ -105,7 +105,7 @@ with open(config['file'], "rb") as f:
 amount = re.search("[\d]+g", config['file']).group()
 amount = amount[:-1]
 amount = int(amount)
-if amount == '1':
+if amount == 1:
     train_set = batch(graphs, 1)
     validate_set = batch(graphs, 1)
 

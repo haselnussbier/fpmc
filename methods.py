@@ -6,9 +6,9 @@ def random_factor(validate_set, config):
 
     for set in validate_set:
 
-        random_fac = random.uniform(low=2/3, high=1, size=jnp.shape(jnp.expand_dims(set.node_features[:, 2], axis=1)))
+        random_fac = random.uniform(low=2/3, high=1, size=jnp.shape(set.node_features[:, 2]))
         while 1 in random_fac:
-            random_fac = random.uniform(low=2/3, high=1, size=jnp.shape(jnp.expand_dims(set.node_features[:, 2], axis=1)))
+            random_fac = random.uniform(low=2/3, high=1, size=jnp.shape(set.node_features[:, 2]))
 
         # get node features
         crit = jnp.expand_dims(set.node_features[:, 0], axis=1)
