@@ -10,18 +10,16 @@ from matplotlib import pyplot as plt
 
 matplotlib.use("Agg")
 DATA = list()
+SCORES = list()
 TIMESTAMP: str
 
 
 def init_result():
     now = datetime.now()
-    timestamp = '{:%d.%m.%y-%H:%M:%S}'.format(now)
+    timestamp = '{:%y.%m.%d-%H:%M:%S}'.format(now)
     global TIMESTAMP
     TIMESTAMP = timestamp
     os.mkdir("results/" + TIMESTAMP)
-    with open("results/" + TIMESTAMP + "/scores.csv", "w", newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(['method', 'utilization', 'probability', 'score'])
 
 
 def append_data(data):
@@ -29,6 +27,13 @@ def append_data(data):
     new = DATA
     new.append(data)
     DATA = new
+
+
+def append_score(name, u, p, s):
+    global SCORES
+    new = SCORES
+    new.append([name, u, p, s])
+    SCORES = new
 
 
 def write_csv():
@@ -60,11 +65,14 @@ def save_config(config: dict):
     global TIMESTAMP
     with open("results/" + TIMESTAMP + "/config.yaml", "w") as f:
         yaml.dump(config, f)
-def save_score(method_name, utilization, probability, score):
+
+def write_score():
     global TIMESTAMP
     with open("results/" + TIMESTAMP + "/scores.csv", "w", newline='') as f:
         writer = csv.writer(f)
-        writer.writerow([method_name, utilization, probability, score])
+        global SCORES
+        for row in SCORES:
+            writer.writerow(row)
 
 def save_model(state):
     # trained_params = jax.experimental.optimizers.unpack_optimizer_state(state)

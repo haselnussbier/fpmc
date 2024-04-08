@@ -1,7 +1,7 @@
 import pickle
 import jax.numpy as jnp
 from numpy import random
-from plot import save_score
+from plot import append_score
 
 def random_factor(validate_set, config):
 
@@ -62,11 +62,11 @@ def random_factor(validate_set, config):
 
         #get average
         util = jnp.sum(util)/config['model']['batch_size']
-        p = jnp.sum(p_full) / config['model']['batch_size']
+        p_taskoverrun = jnp.sum(p_full) / config['model']['batch_size']
 
         u = round(util * 100, 2)
-        p = round(p * 100, 2)
-        s = round(jnp.multiply(util, jnp.subtract(1, p)), 5)
+        p = round(p_taskoverrun * 100, 2)
+        s = round(jnp.multiply(util, jnp.subtract(1, p_taskoverrun)), 5)
 
         print("*************************************************************")
         print("Fraction based method results (average over validation set batches).")
@@ -74,7 +74,7 @@ def random_factor(validate_set, config):
         print("Probability of task overrun: " + str(p) + "%.")
         print("Combined score (u*(1-p)): ", s)
         print("*************************************************************")
-        save_score("random_factor", u, p, s)
+        append_score("random_factor", u, p, s)
 
 
 def base_score(validate_set, config):
@@ -124,11 +124,11 @@ def base_score(validate_set, config):
 
         # get average
         util = jnp.sum(util) / config['model']['batch_size']
-        p = jnp.sum(p_full) / config['model']['batch_size']
+        p_taskoverrun = jnp.sum(p_full) / config['model']['batch_size']
 
         u = round(util * 100, 2)
-        p = round(p * 100, 2)
-        s = round(jnp.multiply(util, jnp.subtract(1, p)), 5)
+        p = round(p_taskoverrun * 100, 2)
+        s = round(jnp.multiply(util, jnp.subtract(1, p_taskoverrun)), 5)
 
         print("*************************************************************")
         print("Unaltered results.")
@@ -136,5 +136,5 @@ def base_score(validate_set, config):
         print("Probability of task overrun: " + str(p) + "%.")
         print("Combined score (u*(1-p)): ", s)
         print("*************************************************************")
-        save_score("base", u, p, s)
+        append_score("base", u, p, s)
 
