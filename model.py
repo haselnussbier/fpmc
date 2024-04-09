@@ -7,7 +7,7 @@ import jax
 import jax.numpy as jnp
 import optax
 
-from plot import plot, init_result, append_data, write_csv, append_score
+from plot import plot, init_result, append_data, write_csv, append_score, save_config
 
 NodeValue = jnp.ndarray
 NodeFeatures = jnp.ndarray
@@ -577,5 +577,5 @@ def run(train_set, validate_set, config):
     #print(jnp.asarray(wcets, dtype=jnp.int32))
     print("*************************************************************")
     append_score("model", u, p, s)
-    #save_config(config)
+    save_config(config)
 
