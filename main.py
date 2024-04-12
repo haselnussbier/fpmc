@@ -8,7 +8,7 @@ from os.path import isfile, join
 from model import run, batch
 from methods import random_factor, base_score
 
-from plot import write_score
+from plot import write_score, save_graph
 import pickle
 
 with open("config.yml", "r") as file:
@@ -118,5 +118,6 @@ else:
 run(train_set, validate_set, config)
 random_factor(validate_set, config)
 base_score(validate_set, config)
+save_graph(config['file'])
 write_score()
 
