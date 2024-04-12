@@ -70,6 +70,7 @@ def write_score():
     global TIMESTAMP
     with open("results/" + TIMESTAMP + "/scores.csv", "w", newline='') as f:
         writer = csv.writer(f)
+        writer.writerow(['method', 'utilization', 'probability', 'score'])
         global SCORES
         for row in SCORES:
             writer.writerow(row)
