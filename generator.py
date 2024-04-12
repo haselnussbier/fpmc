@@ -186,7 +186,7 @@ warning_buffer = jnp.zeros(5)
 with alive_bar(config['amount'], title='Graph-Generator', spinner='classic', bar='solid') as bar:
     while g < config['amount']:
         cmd = "java -jar mcdag/generator.jar " \
-              "-mu " + str(config['graphs']['cores']) + \
+              "-mu " + str(config['graphs']['cores']-(config['graphs']['cores']/10)) + \
               " -nd 1" \
               " -l " + str(config['graphs']['levels']) + \
               " -nt " + str(config['graphs']['tasks']+5) + \
