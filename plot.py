@@ -80,7 +80,7 @@ def save_graph(file):
     cmd = "cp " + file + " results/" + TIMESTAMP
     os.system(cmd)
 
-    
+
 def save_model(state):
     # trained_params = jax.experimental.optimizers.unpack_optimizer_state(state)
     # pickle.dump(trained_params, open("results/" + TIMESTAMP + "/params.pkl", "wb"))
