@@ -422,7 +422,7 @@ def train_model(net, params, train_set, validate_set, model_config):
 
         n = jnp.asarray(jnp.divide(jnp.subtract(wcets_lo_new, acets), st_ds), dtype=jnp.int32)
         # if n = 0 cause of rounding p is 1, which is wrong
-        n = jnp.where(n == 0, 1, n)
+        #n = jnp.where(n == 0, 1, n)
         p_task = jnp.divide(1, jnp.add(1, jnp.power(n, 2)))
         # replace probability of task overrun for lc tasks with 0, so PI(1-p_taskoverrun) only multiplies hc tasks probability
         p_task = jnp.where(crit == 1, p_task, 0)
@@ -535,10 +535,23 @@ def predict_model(net, params, sample, model_config):
     p_full = jnp.subtract(1, jnp.product(jnp.subtract(1, p_task), axis=1))
     losses = jnp.subtract(1, jnp.multiply(util, jnp.subtract(1, p_full)))
 
-    loss = jnp.divide(jnp.sum(losses), model_config['batch_size'])
+    loss_clean = list()
+    prob_clean = list()
+    util_clean = list()
+    for loss, ut, prob in zip(losses, util, p_full):
+        if prob != 1 and ut > 0:
+            loss_clean.append(loss)
+            util_clean.append(ut)
+            prob_clean.append(prob)
 
-    return loss, jnp.divide(jnp.sum(util), model_config['batch_size']), jnp.divide(jnp.sum(p_full),
-                                                                                   model_config['batch_size']), jnp.asarray(wcets_lo_new, dtype=jnp.int32)
+    losses = jnp.asarray(loss_clean)
+    util = jnp.asarray(util_clean)
+    p_full = jnp.asarray(prob_clean)
+
+    loss = jnp.divide(jnp.sum(losses), len(losses))
+
+    return loss, jnp.divide(jnp.sum(util), len(util)), jnp.divide(jnp.sum(p_full),
+                                                                                   len(p_full))
 
 
 def run(train_set, validate_set, config):
@@ -560,7 +573,7 @@ def run(train_set, validate_set, config):
 
     plot()
 
-    loss, utilization, p_task_overrun, wcets = predict_model(net, trained_params, validate_set[0], config['model'])
+    loss, utilization, p_task_overrun = predict_model(net, trained_params, validate_set[0], config['model'])
 
     u = round(utilization * 100, 2)
     p = round(p_task_overrun * 100, 2)

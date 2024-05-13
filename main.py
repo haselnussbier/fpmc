@@ -102,18 +102,27 @@ else:
 with open(config['file'], "rb") as f:
     graphs = pickle.load(f)
 
-amount = re.search("[\d]+g", config['file']).group()
-amount = amount[:-1]
-amount = int(amount)
-if amount == 1:
+if config['file'] == 'graphs/uav.pkl':
     train_set = batch(graphs, 1)
     validate_set = batch(graphs, 1)
 
 else:
-    train_set = graphs[:int(0.8*len(graphs))]
-    validate_set = graphs[int(0.8*len(graphs)):]
-    train_set = batch(train_set, config['model']['batch_size'])
-    validate_set = batch(validate_set, config['model']['batch_size'])
+
+    amount = re.search("[\d]+g", config['file']).group()
+    amount = amount[:-1]
+    amount = int(amount)
+
+    if amount == 1:
+        train_set = batch(graphs, 1)
+        validate_set = batch(graphs, 1)
+
+
+
+    else:
+        train_set = graphs[:int(0.8*len(graphs))]
+        validate_set = graphs[int(0.8*len(graphs)):]
+        train_set = batch(train_set, config['model']['batch_size'])
+        validate_set = batch(validate_set, config['model']['batch_size'])
 
 run(train_set, validate_set, config)
 random_factor(validate_set, config)

@@ -60,9 +60,19 @@ def random_factor(validate_set, config):
         p_task = jnp.where(crit == 1, p_task, 0)
         p_full = jnp.subtract(1, jnp.product(jnp.subtract(1, p_task), axis=1))
 
+        prob_clean = list()
+        util_clean = list()
+        for ut, prob in zip(util, p_full):
+            if prob != 1 and ut > 0:
+                util_clean.append(ut)
+                prob_clean.append(prob)
+
+        util = jnp.asarray(util_clean)
+        p_full = jnp.asarray(prob_clean)
+
         #get average
-        util = jnp.sum(util)/config['model']['batch_size']
-        p_taskoverrun = jnp.sum(p_full) / config['model']['batch_size']
+        util = jnp.sum(util)/len(util)
+        p_taskoverrun = jnp.sum(p_full) / len(p_full)
 
         u = round(util * 100, 2)
         p = round(p_taskoverrun * 100, 2)
@@ -122,9 +132,19 @@ def base_score(validate_set, config):
         p_task = jnp.where(crit == 1, p_task, 0)
         p_full = jnp.subtract(1, jnp.product(jnp.subtract(1, p_task), axis=1))
 
+        prob_clean = list()
+        util_clean = list()
+        for ut, prob in zip(util, p_full):
+            if prob != 1 and ut > 0:
+                util_clean.append(ut)
+                prob_clean.append(prob)
+
+        util = jnp.asarray(util_clean)
+        p_full = jnp.asarray(prob_clean)
+
         # get average
-        util = jnp.sum(util) / config['model']['batch_size']
-        p_taskoverrun = jnp.sum(p_full) / config['model']['batch_size']
+        util = jnp.sum(util) / len(util)
+        p_taskoverrun = jnp.sum(p_full) / len(p_full)
 
         u = round(util * 100, 2)
         p = round(p_taskoverrun * 100, 2)

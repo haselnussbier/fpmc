@@ -1,10 +1,10 @@
 model:
-  neurons: 32
+  neurons: 64
   layers: 8
-  hidden_size: 32
-  steps_to_stop: 10
-  learning_rate: 0.0002
-  batch_size: 1
+  hidden_size: 64
+  steps_to_stop: 20
+  learning_rate: 0.00001
+  batch_size: 20
 
 graphs:
   tasks: 10
@@ -15,4 +15,4 @@ graphs:
 
 amount: 5
 
-file: "graphs/1graphs-c2-t50.pkl"
+file: "graphs/100graphs-c2-t50.pkl"
