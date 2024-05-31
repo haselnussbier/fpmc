@@ -125,8 +125,8 @@ else:
         validate_set = batch(validate_set, config['model']['batch_size'])
 
 init_result()
-#run(train_set, validate_set, config)
-#random_factor(validate_set, config)
+run(train_set, validate_set, config)
+random_factor(validate_set, config)
 same_n(validate_set, config)
 base_score(validate_set, config)
 save_graph(config['file'])
