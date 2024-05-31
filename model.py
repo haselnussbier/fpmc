@@ -6,6 +6,7 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 import optax
+import time
 
 from plot import plot, append_data, write_csv, append_score, save_config
 
@@ -555,7 +556,7 @@ def predict_model(net, params, sample, model_config):
 
 
 def run(train_set, validate_set, config):
-
+    start = time.time()
     model_config = ModelConfig(
         num_hidden_size=config['model']['hidden_size'],
         num_hidden_neurons=config['model']['neurons'],
@@ -569,11 +570,12 @@ def run(train_set, validate_set, config):
                                  train_set=train_set,
                                  validate_set=validate_set[0],
                                  model_config=config['model'])
-
+    end = time.time()
+    print("Elapsed training time: ", end-start)
     plot()
-
+    start = time.time()
     loss, utilization, p_task_overrun = predict_model(net, trained_params, validate_set[0], config['model'])
-
+    end = time.time()
     u = round(utilization * 100, 2)
     p = round(p_task_overrun * 100, 2)
     s = round(utilization * (1 - p_task_overrun), 5)
@@ -583,6 +585,7 @@ def run(train_set, validate_set, config):
     print("Utilization: " + str(u) + "%.")
     print("Probability of task overrun: " + str(p) + "%.")
     print("Combined score (u*(1-p)): ", s)
+    print("Time: ", end-start)
     #print("Starting worstcase execution times (low, high)")
     #print(jnp.asarray(jnp.delete(validate_set[0].node_features[:, (1, 2)], -1, axis=0), dtype=jnp.int32))
     #print("The new calculated worstcase execution times are:")

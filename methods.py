@@ -2,9 +2,10 @@ import pickle
 import jax.numpy as jnp
 from numpy import random
 from plot import append_score
+import time
 
 def random_factor(validate_set, config):
-
+    start = time.time()
     for set in validate_set:
 
         random_fac = random.uniform(low=2/3, high=1, size=jnp.shape(set.node_features[:, 2]))
@@ -73,7 +74,7 @@ def random_factor(validate_set, config):
         #get average
         util = jnp.sum(util)/len(util)
         p_taskoverrun = jnp.sum(p_full) / len(p_full)
-
+        end = time.time()
         u = round(util * 100, 2)
         p = round(p_taskoverrun * 100, 2)
         s = round(jnp.multiply(util, jnp.subtract(1, p_taskoverrun)), 5)
@@ -83,6 +84,7 @@ def random_factor(validate_set, config):
         print("Utilization: " + str(u) + "%.")
         print("Probability of task overrun: " + str(p) + "%.")
         print("Combined score (u*(1-p)): ", s)
+        print("Time: ", end-start)
         print("*************************************************************")
         append_score("random_factor", u, p, s)
 
@@ -91,7 +93,7 @@ def base_score(validate_set, config):
 
 
     for set in validate_set:
-
+        start = time.time()
         # get node features
         crit = jnp.expand_dims(set.node_features[:, 0], axis=1)
         crit = jnp.asarray(jnp.split(crit, config['model']['batch_size']))
@@ -145,7 +147,7 @@ def base_score(validate_set, config):
         # get average
         util = jnp.sum(util) / len(util)
         p_taskoverrun = jnp.sum(p_full) / len(p_full)
-
+        end = time.time()
         u = round(util * 100, 2)
         p = round(p_taskoverrun * 100, 2)
         s = round(jnp.multiply(util, jnp.subtract(1, p_taskoverrun)), 5)
@@ -155,12 +157,14 @@ def base_score(validate_set, config):
         print("Utilization: " + str(u) + "%.")
         print("Probability of task overrun: " + str(p) + "%.")
         print("Combined score (u*(1-p)): ", s)
+        print("Time: ", end-start)
         print("*************************************************************")
         append_score("base", u, p, s)
 
 
 def same_n(validate_set, config):
     for set in validate_set:
+        start = time.time()
         # get node features
         crit = jnp.expand_dims(set.node_features[:, 0], axis=1)
         crit = jnp.asarray(jnp.split(crit, config['model']['batch_size']))
@@ -232,7 +236,7 @@ def same_n(validate_set, config):
         p_taskoverrun = jnp.sum(p_all) / len(p_all)
         score = jnp.sum(score_all) / len(score_all)
 
-
+        end = time.time()
 
         u = round(util * 100, 2)
         p = round(p_taskoverrun * 100, 2)
@@ -243,5 +247,6 @@ def same_n(validate_set, config):
         print("Utilization: " + str(u) + "%.")
         print("Probability of task overrun: " + str(p) + "%.")
         print("Combined score (u*(1-p)): ", s)
+        print("Time: ", end-start)
         print("*************************************************************")
         append_score("date", u, p, s)
