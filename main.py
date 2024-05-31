@@ -8,7 +8,7 @@ from os.path import isfile, join
 from model import run, batch
 from methods import random_factor, base_score, same_n
 
-from plot import write_score, save_graph
+from plot import write_score, save_graph, init_result
 import pickle
 
 with open("config.yml", "r") as file:
@@ -124,8 +124,9 @@ else:
         train_set = batch(train_set, config['model']['batch_size'])
         validate_set = batch(validate_set, config['model']['batch_size'])
 
-run(train_set, validate_set, config)
-random_factor(validate_set, config)
+init_result()
+#run(train_set, validate_set, config)
+#random_factor(validate_set, config)
 same_n(validate_set, config)
 base_score(validate_set, config)
 save_graph(config['file'])

@@ -4,7 +4,7 @@ model:
   hidden_size: 128
   steps_to_stop: 5
   learning_rate: 0.00001
-  batch_size: 1
+  batch_size: 200
 
 graphs:
   tasks: 10
@@ -15,4 +15,4 @@ graphs:
 
 amount: 5
 
-file: "graphs/uav.pkl"
+file: "graphs/1000graphs-c8-t50.pkl"

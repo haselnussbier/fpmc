@@ -7,7 +7,7 @@ import jax
 import jax.numpy as jnp
 import optax
 
-from plot import plot, init_result, append_data, write_csv, append_score, save_config
+from plot import plot, append_data, write_csv, append_score, save_config
 
 NodeValue = jnp.ndarray
 NodeFeatures = jnp.ndarray
@@ -555,7 +555,6 @@ def predict_model(net, params, sample, model_config):
 
 
 def run(train_set, validate_set, config):
-    init_result()
 
     model_config = ModelConfig(
         num_hidden_size=config['model']['hidden_size'],
