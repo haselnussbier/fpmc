@@ -96,7 +96,7 @@ if options.layer and options.neuron and options.hidden_size and options.steps_to
     config['model']['batch_size'] = options.batch_size
 else:
     print("Incomplete model parameters. Please use -h to get a list of necessary input.")
-    #sys.exit()
+    sys.exit()
 
 # batch
 with open(config['file'], "rb") as f:
